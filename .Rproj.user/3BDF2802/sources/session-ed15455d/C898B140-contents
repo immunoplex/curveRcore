@@ -1,0 +1,86 @@
+core <- "C:/Users/d78039e/Documents/R-git/curveRcore"
+
+fix_nonascii <- function(path) {
+  L <- readLines(path, warn = FALSE, encoding = "UTF-8")   # encoding= matters on Windows
+  L <- gsub("\u2500", "-",  L)   # box-drawing line  -> hyphen (length-preserving dividers)
+  L <- gsub("\u2014", "--", L)   # em dash           -> --
+  L <- gsub("\u2192", "->", L)   # right arrow       -> ->
+  con <- file(path, open = "wb") # binary + explicit \n keeps LF line-endings (no CRLF)
+  writeLines(L, con, sep = "\n", useBytes = TRUE)
+  close(con)
+  invisible(L)
+}
+
+for (f in file.path(core, "R", c("eligibility.R", "result_class.R"))) fix_nonascii(f)
+
+# verify – both should print nothing
+tools::showNonASCIIfile(file.path(core, "R", "eligibility.R"))
+tools::showNonASCIIfile(file.path(core, "R", "result_class.R"))
+
+.rs.restartR()
+core <- "C:/Users/d78039e/Documents/R-git/curveRcore"
+f <- file.path(core, "R", "gradients.R")
+L <- readLines(f, warn = FALSE, encoding = "UTF-8")
+
+target    <- "^grad_(inv|y)_(logistic|loglogistic|gompertz)[45]?_fixed\\s*<-\\s*function"
+def_lines <- grep(target, L)
+stopifnot(length(def_lines) == 10)                 # sanity: exactly the 10
+
+changed <- 0L
+for (i in def_lines) {
+  j <- i - 1L
+  while (j >= 1L && grepl("^\\s*$", L[j])) j <- j - 1L   # skip blanks if any
+  if (grepl("^#'\\s*@export\\s*$", L[j])) { L[j] <- "#' @noRd"; changed <- changed + 1L }
+}
+cat("Converted", changed, "@export -> @noRd\n")
+stopifnot(changed == 10L)
+
+con <- file(f, open = "wb"); writeLines(L, con, sep = "\n", useBytes = TRUE); close(con)
+
+
+.rs.restartR()
+core <- "C:/Users/d78039e/Documents/R-git/curveRcore"
+devtools::document()
+
+# NAMESPACE no longer exports the 10
+ns  <- readLines(file.path(core, "NAMESPACE"), warn = FALSE)
+stopifnot(length(grep(pat, ns)) == 0)
+
+# they still exist internally AND the dispatcher still works end-to-end
+devtools::load_all(core)
+stopifnot(is.function(curveRcore:::grad_inv_logistic4_fixed))
+gg <- make_inv_and_grad_fixed("logistic4", fixed_a = 0)
+p  <- c(b = 1, c = 0, d = 10)
+str(gg$grad(5, p)); str(gg$grad_y(5, p))     # compute without error
+cat("OK: grad_*_fixed internal, dispatcher intact\n")
+
+file.exists("~/R-git/curveRcore/.RData")          # the culprit workspace
+file.rename("~/R-git/curveRcore/.RData", "~/R-git/curveRcore/.RData.bak")  # set it aside
+file.exists("C:/Users/d78039e/Documents/R-git/curveRcore/.Rprofile")  
+
+.rs.restartR()           # or Session > Restart R
+core <- "C:/Users/d78039e/Documents/R-git/curveRcore"
+devtools::document()
+
+
+
+core <- "C:/Users/d78039e/Documents/R-git/curveRcore"
+gf   <- file.path(core, "R", "gradients.R")
+L    <- readLines(gf, warn = FALSE)
+length(L)
+cut  <- grep("^\\s*risky\\s*<-", L)[1]   # first line of the stray block
+cut                                       # should be 355
+
+con <- file(gf, open = "wb"); writeLines(keep, con, sep = "\n", useBytes = TRUE); close(con)
+
+
+L2 <- readLines(gf, warn = FALSE)
+cat("residual stray lines (want 0):",
+    length(grep("devtools::|load_all|^\\s*risky|Clean:|str\\(gg\\$", L2)), "\n")
+invisible(parse(gf))                                   # silent = parses cleanly
+cat("@noRd count (want >= 10):", sum(grepl("@noRd", L2)), "\n")
+
+
+.rs.restartR()
+core <- "C:/Users/d78039e/Documents/R-git/curveRcore"
+devtools::document(core)

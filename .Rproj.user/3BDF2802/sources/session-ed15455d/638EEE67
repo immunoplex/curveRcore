@@ -1,0 +1,27 @@
+{
+    "id": "638EEE67",
+    "path": "~/R-git/curveRcore/R/shape_loq.R",
+    "project_path": "R/shape_loq.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1780592825791.0,
+    "source_on_save": false,
+    "relative_order": 14,
+    "properties": {
+        "tempName": "Untitled5",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "1,2",
+        "scrollLine": "0"
+    },
+    "folds": "60|55|114|0|\n103|25|110|4|\n146|47|213|0|\n220|53|227|0|\n231|49|240|0|\n249|68|273|0|\n282|76|327|0|\n304|25|325|4|\n332|78|356|0|\n363|36|385|0|\n389|39|407|0|\n411|43|424|0|\n419|32|423|2|\n428|39|441|0|\n445|47|454|0|\n448|25|452|4|\n449|34|451|6|\n458|79|499|0|\n474|46|477|2|\n481|55|483|2|\n506|44|528|0|\n532|45|541|0|\n545|60|557|0|\n",
+    "lastKnownWriteTime": 1780592877,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1780685596131,
+    "read_only": false,
+    "read_only_alternatives": []
+}

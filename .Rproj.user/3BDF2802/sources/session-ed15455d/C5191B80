@@ -1,0 +1,27 @@
+{
+    "id": "C5191B80",
+    "path": "~/R-git/curveRcore/tests/testthat/test-detection_limits.R",
+    "project_path": "tests/testthat/test-detection_limits.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1780599931246.0,
+    "source_on_save": false,
+    "relative_order": 16,
+    "properties": {
+        "tempName": "Untitled5",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "29,34",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1780600030,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1780600030045,
+    "read_only": false,
+    "read_only_alternatives": []
+}

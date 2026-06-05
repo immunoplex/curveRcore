@@ -1,0 +1,558 @@
+# =============================================================================
+# shape_loq.R
+#
+# Curvature-based (shape) Limits of Quantification computed from the second
+# derivative of the fitted calibration curve.
+#
+# The second derivative d²(log10 y) / d(log10 x)² of a monotone increasing
+# sigmoid has a characteristic shape:
+#   - a peak (maximum) at concentrations below the inflection point
+#   - a zero crossing at the inflection point
+#   - a valley (minimum) at concentrations above the inflection point
+#
+# The shape-LLOQ is defined as the concentration at the peak (global maximum)
+# and the shape-ULOQ as the concentration at the valley (global minimum).
+# These bracket the quasi-linear region of maximum assay sensitivity.
+#
+# The computation uses a three-pass adaptive numerical scheme:
+#   Pass 1: coarse uniform grid in log10(x) space
+#   Pass 2: analytical seed brackets from model-family-specific formulas
+#   Pass 3: dense refinement inside all detected brackets
+#
+# References:
+#   Sebaugh & McCray (shape-based LOQ from second derivative)
+#   Daly et al. (curvature-based quantification limits)
+# =============================================================================
+
+
+# ── Shared constants ─────────────────────────────────────────────────────────
+.LN10    <- log(10)
+.LN_PHI2 <- log((3 + sqrt(5)) / 2)
+.S3      <- sqrt(3)
+
+
+#' Compute the second derivative grid for a calibration_result
+#'
+#' Evaluates \eqn{d^2(\log_{10} y) / d(\log_{10} x)^2} over an adaptive
+#' concentration grid for the specified model in a \code{calibration_result}.
+#'
+#' The function uses curveRcore's forward model functions directly, evaluating
+#' on the fitting scale and converting to the log-log second derivative
+#' numerically via non-uniform central differences.
+#'
+#' @param cr A \code{calibration_result} object (single plate).
+#' @param model_name Character; model to use. If \code{NULL}, uses the best
+#'   eligible model.
+#' @param n_coarse Integer; coarse grid resolution (default 200).
+#' @param n_refine Integer; refinement grid resolution per bracket (default 100).
+#' @param verbose Logical; emit messages on failure (default \code{TRUE}).
+#'
+#' @return A data frame with columns:
+#'   \describe{
+#'     \item{\code{log10_concentration}}{Grid positions on the log10 scale.}
+#'     \item{\code{concentration}}{Grid positions on the natural scale.}
+#'     \item{\code{d2y_dx2}}{Second derivative
+#'       \eqn{d^2(\log_{10} y) / d(\log_{10} x)^2} at each position.}
+#'   }
+#'
+#' @export
+compute_second_deriv_grid <- function(cr, model_name = NULL,
+                                      n_coarse = 200L, n_refine = 100L,
+                                      verbose = TRUE) {
+
+  stopifnot(inherits(cr, "calibration_result"))
+
+  model_name <- model_name %||% cr$selection$best_model_name
+  ens        <- cr$ensemble[[model_name]]
+
+  if (is.null(ens) || !isTRUE(ens$converged)) {
+    if (verbose) message(sprintf(
+      "[compute_second_deriv_grid] curve_id=%s model=%s not converged",
+      cr$meta$curve_id, model_name))
+    return(data.frame(
+      log10_concentration = numeric(0),
+      concentration       = numeric(0),
+      d2y_dx2             = numeric(0)
+    ))
+  }
+
+  # Build parameter list on the fitting scale
+  method    <- cr$meta$method
+  params    <- .extract_params(ens, method)
+  family    <- .canonical_model_family(model_name)
+  is_log_x  <- isTRUE(cr$meta$is_log_independent)
+  is_log_y  <- isTRUE(cr$meta$is_log_response)
+
+  # Build natural-scale parameters for grid sizing
+  p_nat <- .to_natural_params(params, family, is_log_x, is_log_y)
+
+  # Build evaluator: maps natural concentration -> log10(response)
+  eval_fn <- .build_eval_fn(params, family, model_name, is_log_x, is_log_y)
+
+  p_grid <- list(
+    family  = family,
+    b       = p_nat$b,
+    c       = p_nat$c,
+    g       = p_nat$g,
+    eval_fn = eval_fn
+  )
+
+  # Three-pass adaptive computation
+  result <- tryCatch(
+    .compute_second_deriv_series(p_grid, n_coarse = n_coarse,
+                                 n_refine = n_refine),
+    error = function(e) {
+      if (verbose) message(sprintf(
+        "[compute_second_deriv_grid] curve_id=%s deriv failed: %s",
+        cr$meta$curve_id, e$message))
+      data.frame(log10_concentration = numeric(0),
+                 concentration       = numeric(0),
+                 d2y_dx2             = numeric(0))
+    }
+  )
+
+  result
+}
+
+
+#' Compute curvature-based (shape) Limits of Quantification
+#'
+#' Identifies the lower shape-LOQ (LLOQ) as the concentration at the global
+#' maximum of \eqn{d^2(\log_{10} y) / d(\log_{10} x)^2}, and the upper
+#' shape-LOQ (ULOQ) as the concentration at the global minimum.  Vertex
+#' positions are refined by 3-point parabolic interpolation.
+#'
+#' @param cr A \code{calibration_result} object (single plate).
+#' @param model_name Character; model to use. If \code{NULL}, uses the best
+#'   eligible model.
+#' @param second_deriv A data frame from \code{\link{compute_second_deriv_grid}},
+#'   or \code{NULL} to compute it internally.
+#' @param n_coarse Integer; coarse grid resolution (default 200).
+#' @param n_refine Integer; refinement grid resolution (default 100).
+#' @param verbose Logical; emit diagnostic messages (default \code{TRUE}).
+#'
+#' @return A named list with elements:
+#'   \describe{
+#'     \item{\code{shape_lloq_log10}}{Lower shape-LOQ (log10 concentration).}
+#'     \item{\code{shape_uloq_log10}}{Upper shape-LOQ (log10 concentration).}
+#'     \item{\code{shape_lloq_conc}}{Lower shape-LOQ (natural concentration).}
+#'     \item{\code{shape_uloq_conc}}{Upper shape-LOQ (natural concentration).}
+#'     \item{\code{shape_lloq_response}}{Predicted response at the shape-LLOQ.}
+#'     \item{\code{shape_uloq_response}}{Predicted response at the shape-ULOQ.}
+#'   }
+#'
+#' @export
+compute_shape_loq <- function(cr, model_name = NULL, second_deriv = NULL,
+                              n_coarse = 200L, n_refine = 100L,
+                              verbose = TRUE) {
+
+  stopifnot(inherits(cr, "calibration_result"))
+
+  model_name <- model_name %||% cr$selection$best_model_name
+  method     <- cr$meta$method
+
+  # Compute second derivative if not provided
+  if (is.null(second_deriv)) {
+    second_deriv <- compute_second_deriv_grid(
+      cr, model_name = model_name,
+      n_coarse = n_coarse, n_refine = n_refine,
+      verbose = verbose)
+  }
+
+  if (nrow(second_deriv) < 3) {
+    if (verbose) message(sprintf(
+      "[compute_shape_loq] curve_id=%s: insufficient second derivative points",
+      cr$meta$curve_id))
+    return(.empty_shape_loq(cr$meta$curve_id, model_name, method))
+  }
+
+  x  <- second_deriv$log10_concentration
+  y  <- second_deriv$d2y_dx2
+  ok <- is.finite(x) & is.finite(y)
+  x  <- x[ok];  y <- y[ok]
+
+  # Find local extrema via sign changes in first differences
+  dy      <- diff(y)
+  idx_max <- which(dy[-1] < 0 & dy[-length(dy)] > 0) + 1L
+  idx_min <- which(dy[-1] > 0 & dy[-length(dy)] < 0) + 1L
+
+  # Refine via 3-point parabolic interpolation
+  max_df <- .collect_extrema(x, y, idx_max)
+  min_df <- .collect_extrema(x, y, idx_min)
+
+  # Shape-LLOQ = global maximum; Shape-ULOQ = global minimum
+  lloq_log10 <- if (nrow(max_df) > 0) max_df$x[which.max(max_df$y)] else NA_real_
+  uloq_log10 <- if (nrow(min_df) > 0) min_df$x[which.min(min_df$y)] else NA_real_
+
+  # Evaluate the forward model at LOQ positions to get response values
+  ens    <- cr$ensemble[[model_name]]
+  params <- .extract_params(ens, method)
+  family <- .canonical_model_family(model_name)
+
+  lloq_response <- .safe_forward_eval(params, family, model_name, lloq_log10, cr$meta)
+  uloq_response <- .safe_forward_eval(params, family, model_name, uloq_log10, cr$meta)
+
+  if (verbose) message(sprintf(
+    "[compute_shape_loq] curve_id=%s  lloq=%.4f (%.4f AU/mL)  uloq=%.4f (%.4f AU/mL)",
+    cr$meta$curve_id,
+    ifelse(is.na(lloq_log10), NA, lloq_log10),
+    ifelse(is.na(lloq_log10), NA, 10^lloq_log10),
+    ifelse(is.na(uloq_log10), NA, uloq_log10),
+    ifelse(is.na(uloq_log10), NA, 10^uloq_log10)))
+
+  list(
+    curve_id            = cr$meta$curve_id,
+    shape_lloq_log10    = lloq_log10,
+    shape_uloq_log10    = uloq_log10,
+    shape_lloq_conc     = .pow10(lloq_log10),
+    shape_uloq_conc     = .pow10(uloq_log10),
+    shape_lloq_response = lloq_response,
+    shape_uloq_response = uloq_response,
+    model_name          = model_name,
+    method              = method
+  )
+}
+
+
+# ── Internal: parameter extraction and model evaluation ──────────────────────
+
+#' Extract a named parameter vector from an ensemble entry
+#' @keywords internal
+.extract_params <- function(ensemble_entry, method) {
+  p <- ensemble_entry$parameters
+  if (method == "frequentist") {
+    stats::setNames(p$estimate, p$term)
+  } else {
+    stats::setNames(p$mean, p$term)
+  }
+}
+
+#' Map a model name to its canonical family string
+#' @keywords internal
+.canonical_model_family <- function(model_name) {
+  switch(model_name,
+         logistic4    = "logistic4",
+         logistic5    = "logistic5",
+         gompertz4    = "gompertz4",
+         loglogistic4 = "loglogistic4",
+         loglogistic5 = "loglogistic5",
+         model_name  # fallback
+  )
+}
+
+#' Convert fitting-scale parameters to natural scale for grid sizing
+#'
+#' For log-scale independent variables: c_nat = 10^c_fit.
+#' For log-scale slope (logistic/gompertz): b_nat = b_fit * ln(10).
+#' For log-logistic slope: b_nat = b_fit (already on log10 scale).
+#'
+#' @keywords internal
+.to_natural_params <- function(params, family, is_log_x, is_log_y) {
+  b <- as.numeric(params["b"])
+  c_val <- as.numeric(params["c"])
+  g <- if ("g" %in% names(params) && !is.na(params["g"])) {
+    as.numeric(params["g"])
+  } else 1.0
+
+  if (is_log_x) {
+    c_nat <- 10^c_val
+  } else {
+    c_nat <- c_val
+  }
+
+  # b_nat depends on model family
+  b_nat <- switch(family,
+                  logistic4    = ,
+                  logistic5    = ,
+                  gompertz4    = b * .LN10,
+                  loglogistic4 = ,
+                  loglogistic5 = b,
+                  b * .LN10  # default
+  )
+
+  list(b = b_nat, c = c_nat, g = g)
+}
+
+#' Build an evaluation closure: natural concentration -> log10(response)
+#'
+#' This closure is used by the second derivative computation. It takes
+#' natural-scale x values and returns log10(response), using the curveRcore
+#' forward model functions on the fitting scale.
+#'
+#' @keywords internal
+.build_eval_fn <- function(params, family, model_name, is_log_x, is_log_y) {
+
+  # Capture parameters eagerly
+  p <- as.list(params)
+
+  # Get the forward model function from curveRcore
+  fwd_fn <- switch(model_name,
+                   logistic4    = logistic4,
+                   logistic5    = logistic5,
+                   gompertz4    = gompertz4,
+                   loglogistic4 = loglogistic4,
+                   loglogistic5 = loglogistic5,
+                   stop(sprintf("Unknown model: %s", model_name), call. = FALSE)
+  )
+
+  local({
+    pars   <- p
+    fwd    <- fwd_fn
+    log_x  <- is_log_x
+    log_y  <- is_log_y
+    mname  <- model_name
+
+    function(x_natural) {
+      # Convert natural x to fitting scale
+      x_fit <- if (log_x) log10(pmax(x_natural, 1e-300)) else x_natural
+
+      # Evaluate forward model on fitting scale
+      a <- pars[["a"]]; b <- pars[["b"]]; c <- pars[["c"]]; d <- pars[["d"]]
+      g <- pars[["g"]]
+
+      y_fit <- if (!is.null(g) && !is.na(g)) {
+        fwd(x_fit, a, b, c, d, g)
+      } else {
+        fwd(x_fit, a, b, c, d)
+      }
+
+      # Convert to log10(natural response) for the second derivative
+      if (log_y) {
+        # y_fit is already log10(response), so log10(10^y_fit) = y_fit
+        y_fit
+      } else {
+        log10(pmax(y_fit, 1e-10))
+      }
+    }
+  })
+}
+
+#' Evaluate the forward model at a log10 concentration, returning on the
+#' fitting scale
+#' @keywords internal
+.safe_forward_eval <- function(params, family, model_name, log10_conc, meta) {
+  if (is.na(log10_conc)) return(NA_real_)
+
+  fwd_fn <- switch(model_name,
+                   logistic4    = logistic4,
+                   logistic5    = logistic5,
+                   gompertz4    = gompertz4,
+                   loglogistic4 = loglogistic4,
+                   loglogistic5 = loglogistic5,
+                   NULL
+  )
+  if (is.null(fwd_fn)) return(NA_real_)
+
+  tryCatch({
+    x_fit <- if (isTRUE(meta$is_log_independent)) log10_conc else 10^log10_conc
+    a <- as.numeric(params["a"]); b <- as.numeric(params["b"])
+    c <- as.numeric(params["c"]); d <- as.numeric(params["d"])
+    g <- if ("g" %in% names(params) && !is.na(params["g"])) {
+      as.numeric(params["g"])
+    } else NULL
+
+    if (!is.null(g)) fwd_fn(x_fit, a, b, c, d, g)
+    else             fwd_fn(x_fit, a, b, c, d)
+  }, error = function(e) NA_real_)
+}
+
+
+# ── Internal: three-pass adaptive second derivative ──────────────────────────
+
+#' Grid bounds for the second derivative, family-specific
+#' @keywords internal
+.sderiv_grid_bounds <- function(p) {
+  bw  <- abs(p$b)
+  u_c <- log10(max(p$c, 1e-300))
+
+  switch(p$family,
+         "logistic4" = ,
+         "logistic5" = {
+           gg   <- if (p$family == "logistic5") max(p$g, 1e-9) else 1
+           span <- max(6 * bw / .LN10 * max(gg, 1)^0.3, 1e-9)
+           c(u_lo = u_c - span, u_hi = u_c + span)
+         },
+         "loglogistic4" = ,
+         "loglogistic5" = {
+           span <- max(6 / bw, 1e-9)
+           c(u_lo = u_c - span, u_hi = u_c + span)
+         },
+         "gompertz4" = {
+           span <- max(6 * bw / .LN10, 1e-9)
+           c(u_lo = u_c - 2 * span, u_hi = u_c + span)
+         },
+         stop(sprintf("Unknown family '%s'", p$family), call. = FALSE)
+  )
+}
+
+#' Analytical seed positions for second derivative extrema
+#' @keywords internal
+.sderiv_seed_positions <- function(p) {
+  bw  <- abs(p$b)
+  u_c <- log10(max(p$c, 1e-300))
+
+  switch(p$family,
+         "logistic4"    = u_c + bw * log10(c(2 - .S3, 2 + .S3)),
+         "logistic5"    = {
+           gg <- max(p$g, 1e-9)
+           u_c + bw * gg^0.3 * log10(c(2 - .S3, 2 + .S3))
+         },
+         "loglogistic4" = u_c + log10(c(2 - .S3, 2 + .S3)) / bw,
+         "loglogistic5" = {
+           gg <- max(p$g, 1e-9)
+           u_c + (log10(c(2 - .S3, 2 + .S3)) / bw) * gg^0.3
+         },
+         "gompertz4"    = u_c + c(-.LN_PHI2, .LN_PHI2) / (bw * .LN10),
+         stop(sprintf("Unknown family '%s'", p$family), call. = FALSE)
+  )
+}
+
+#' Detect bracket intervals around extrema in a discrete second derivative
+#' @keywords internal
+.sderiv_find_brackets <- function(u, d2y) {
+  ok    <- !is.na(d2y)
+  u_v   <- u[ok];  d2y_v <- d2y[ok]
+  if (length(d2y_v) < 4L) return(list())
+
+  dd       <- diff(d2y_v)
+  sign_chg <- which(dd[-length(dd)] * dd[-1] < 0)
+
+  lapply(sign_chg, function(i) {
+    lo <- max(1L, i - 1L)
+    hi <- min(length(u_v), i + 2L)
+    c(u_v[lo], u_v[hi])
+  })
+}
+
+#' Non-uniform central-difference d²y/du² where u = log10(x)
+#' @keywords internal
+.d2y_du2_nonuniform <- function(x, y) {
+  u  <- log10(x)
+  n  <- length(u)
+  d2 <- rep(NA_real_, n)
+  for (i in seq(2L, n - 1L)) {
+    if (anyNA(y[c(i - 1L, i, i + 1L)])) next
+    h_l <- u[i] - u[i - 1L]
+    h_r <- u[i + 1L] - u[i]
+    if (h_l < .Machine$double.eps || h_r < .Machine$double.eps) next
+    d2[i] <- 2 * ((y[i + 1L] - y[i]) / h_r -
+                    (y[i] - y[i - 1L]) / h_l) / (h_l + h_r)
+  }
+  d2
+}
+
+#' Safe vectorised evaluation of the eval_fn closure
+#' @keywords internal
+.sderiv_safe_eval <- function(eval_fn, x_vec) {
+  tryCatch(
+    as.numeric(eval_fn(x_vec)),
+    error = function(e) {
+      vapply(x_vec, function(xv) {
+        tryCatch(as.numeric(eval_fn(xv)), error = function(e2) NA_real_)
+      }, numeric(1L))
+    }
+  )
+}
+
+#' Three-pass adaptive second derivative computation
+#' @keywords internal
+.compute_second_deriv_series <- function(p, n_coarse = 200L, n_refine = 100L) {
+
+  bounds  <- .sderiv_grid_bounds(p)
+  seeds_u <- .sderiv_seed_positions(p)
+
+  # Pass 1: coarse grid
+  u_coarse <- seq(bounds["u_lo"], bounds["u_hi"], length.out = n_coarse)
+  x_coarse <- 10^u_coarse
+  y_coarse <- .sderiv_safe_eval(p$eval_fn, x_coarse)
+
+  # Pass 2: detect brackets from coarse second derivative
+  d2y_coarse <- .d2y_du2_nonuniform(x_coarse, y_coarse)
+  bracks     <- .sderiv_find_brackets(u_coarse, d2y_coarse)
+
+  # Seed-centred brackets
+  du  <- (bounds["u_hi"] - bounds["u_lo"]) / n_coarse
+  seed_bracks <- lapply(seeds_u, function(s) {
+    c(max(bounds["u_lo"], s - 4 * du),
+      min(bounds["u_hi"], s + 4 * du))
+  })
+  all_bracks <- c(bracks, seed_bracks)
+
+  # Pass 3: dense refinement
+  refined_u <- unlist(lapply(all_bracks, function(br) {
+    seq(br[1], br[2], length.out = n_refine)
+  }))
+
+  # Merge, deduplicate, evaluate
+
+  u_all   <- sort(unique(c(u_coarse, refined_u)))
+  x_all   <- 10^u_all
+  y_all   <- .sderiv_safe_eval(p$eval_fn, x_all)
+  d2y_all <- .d2y_du2_nonuniform(x_all, y_all)
+
+  # Drop NAs
+  ok <- !is.na(d2y_all)
+  data.frame(
+    log10_concentration = u_all[ok],
+    concentration       = x_all[ok],
+    d2y_dx2             = d2y_all[ok]
+  )
+}
+
+
+# ── Internal: parabolic interpolation of extrema ─────────────────────────────
+
+#' Refine extremum position via 3-point parabolic interpolation
+#' @keywords internal
+.interpolate_vertex <- function(x, y, idx) {
+  xi <- x[(idx - 1):(idx + 1)]
+  yi <- y[(idx - 1):(idx + 1)]
+
+  x1 <- xi[1]; x2 <- xi[2]; x3 <- xi[3]
+  y1 <- yi[1]; y2 <- yi[2]; y3 <- yi[3]
+
+  denom <- (x1 - x2) * (x1 - x3) * (x2 - x3)
+  if (abs(denom) < .Machine$double.eps * 1e8)
+    return(list(x = x2, y = y2))
+
+  a_coef <- (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / denom
+  b_coef <- (x3^2 * (y1 - y2) + x2^2 * (y3 - y1) + x1^2 * (y2 - y3)) / denom
+
+  if (abs(a_coef) < .Machine$double.eps)
+    return(list(x = x2, y = y2))
+
+  xv <- -b_coef / (2 * a_coef)
+  xv <- max(min(xv, max(xi)), min(xi))
+  yv <- a_coef * xv^2 + b_coef * xv + (y1 - a_coef * x1^2 - b_coef * x1)
+
+  list(x = as.numeric(xv), y = as.numeric(yv))
+}
+
+#' Collect and refine all detected extrema of a given type
+#' @keywords internal
+.collect_extrema <- function(x, y, indices) {
+  if (length(indices) == 0)
+    return(data.frame(x = numeric(0), y = numeric(0)))
+
+  verts <- lapply(indices, function(idx) .interpolate_vertex(x, y, idx))
+  data.frame(
+    x = vapply(verts, `[[`, numeric(1), "x"),
+    y = vapply(verts, `[[`, numeric(1), "y")
+  )
+}
+
+#' Return an empty shape-LOQ result
+#' @keywords internal
+.empty_shape_loq <- function(curve_id, model_name, method) {
+  list(
+    curve_id            = curve_id,
+    shape_lloq_log10    = NA_real_,
+    shape_uloq_log10    = NA_real_,
+    shape_lloq_conc     = NA_real_,
+    shape_uloq_conc     = NA_real_,
+    shape_lloq_response = NA_real_,
+    shape_uloq_response = NA_real_,
+    model_name          = model_name,
+    method              = method
+  )
+}

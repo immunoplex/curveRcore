@@ -1,0 +1,9 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^doc$
+^Meta$
+^vignettes/rsconnect$
+^CONTRIBUTING\.md$
+^PARAMETERIZATION\.md$
+^data-raw$
+^LICENSE\.md$

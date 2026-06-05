@@ -1,0 +1,26 @@
+{
+    "id": "10FDF250",
+    "path": "~/R-git/curveRcore/R/utils.R",
+    "project_path": "R/utils.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1780682508645.0,
+    "source_on_save": false,
+    "relative_order": 18,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "22,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1780682576,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1780682576513,
+    "read_only": false,
+    "read_only_alternatives": []
+}
