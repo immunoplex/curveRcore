@@ -1,6 +1,6 @@
 # Changelog
 
-## curveRcore 0.1.0
+## curveRcore 0.2.0
 
 - Initial release.
 - Five canonical forward models: `logistic4`, `logistic5`,

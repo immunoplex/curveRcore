@@ -1,6 +1,5 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^doc$
 ^Meta$
 ^vignettes/rsconnect$
 ^CONTRIBUTING\.md$

@@ -4,6 +4,30 @@ template:
   bootstrap: 5.0
   bootswatch: flatly
 
+home:
+  title: curveRcore
+  description: Shared models, inverses, gradients and output classes for the curveR immunoassay ecosystem.
+
+navbar:
+  title: "curveRcore"
+  logo:
+    image: man/figures/logo_small.png   # <-- sticker appears in navbar
+    alt: curveRfreq logo
+    width: 200px
+    href: index.html
+  structure:
+    left:
+      - intro
+      - reference
+      - articles
+    right:
+      - search
+      - github
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/immunoplex/curveRcore
+
 reference:
 - title: Forward Models
   desc: Five canonical sigmoid/saturation model functions.
@@ -130,20 +154,3 @@ reference:
 news:
   one_page: true
 
-navbar:
-  title: "curveRcore"
-  logo:
-    image: man/figures/logo_small.png   # <-- sticker appears in navbar
-    href: index.html
-  structure:
-    left:
-      - intro
-      - reference
-      - articles
-    right:
-      - search
-      - github
-  components:
-    github:
-      icon: fa-github
-      href: https://github.com/immunoplex/curveR
