@@ -1,0 +1,139 @@
+url: https://immunoplex.github.io/curveRcore/
+
+template:
+  bootstrap: 5
+  bootswatch: flatly
+
+home:
+  title: "curveRcore"
+  description: >
+    Core calibration curve engine — forward models, transforms, eligibility
+    gating, detection limits, and the shared calibration_result class for the
+    curveR suite.
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [github]
+  components:
+    github:
+      icon: fab fa-github
+      href: https://github.com/immunoplex/curveRcore
+
+reference:
+  - title: "Forward Models"
+    desc: >
+      Five canonical sigmoid/saturation models. All accept a pre-transformed
+      independent variable (typically log10-concentration).
+    contents:
+      - logistic4
+      - logistic5
+      - loglogistic4
+      - loglogistic5
+      - gompertz4
+      - available_models
+      - build_nls_formulas
+
+  - title: "Settings & Configuration"
+    desc: >
+      Constructor/validator functions for the three shared settings objects
+      consumed by curveRfreq and curveRbayes.
+    contents:
+      - new_antigen_constraints
+      - new_study_params
+      - new_fit_options
+      - resolve_effective_models
+      - resolve_response_col
+
+  - title: "Data Transforms"
+    desc: >
+      Upstream transforms applied to raw assay data before model fitting.
+    contents:
+      - bead_assay_example
+      - elisa_assay_example
+      - starts_with("compute_")
+      - starts_with("apply_")
+      - starts_with("transform_")
+      - correct_prozone
+
+  - title: "Data Helpers"
+    desc: Internal helpers for data preparation and column resolution.
+    contents:
+      - starts_with("prepare_")
+      - starts_with("resolve_")
+
+  - title: "Calibration Result Class"
+    desc: >
+      The `calibration_result` S3 class — the single output type returned by
+      both curveRfreq and curveRbayes.
+    contents:
+      - new_calibration_result
+      - starts_with("is.")
+      - starts_with("print.")
+      - starts_with("summary.")
+      - starts_with("tidy.")
+
+  - title: "Tidy Extractors"
+    desc: Broom-style helpers for pulling tabular data from result objects.
+    contents:
+      - starts_with("extract_")
+      - starts_with("tidy_")
+
+  - title: "Model Eligibility & Selection"
+    desc: >
+      Quantification-aware gating applied before AIC / LOO-CV ranking to
+      exclude boundary-constrained or ill-identified models.
+    contents:
+      - assess_model_eligibility
+      - select_best_eligible
+
+  - title: "Detection & Quantification Limits"
+    desc: LOD, LLOD, ULOQ, LLOQ calculation functions.
+    contents:
+      - starts_with("compute_lod")
+      - starts_with("compute_loq")
+      - starts_with("compute_lloq")
+      - starts_with("compute_uloq")
+
+  - title: "Grid Predictions"
+    desc: Evenly-spaced concentration grids and forward predictions.
+    contents:
+      - starts_with("make_grid")
+      - starts_with("predict_grid")
+      - starts_with("generate_prediction")
+      - enrich_grid_with_d2y
+
+  - title: "Inverses & Back-Calculation"
+    desc: >
+      Numerical and analytical inverses of the forward models used to
+      back-calculate concentration from response.
+    contents:
+      - starts_with("inverse_")
+      - starts_with("back_calc")
+
+  - title: "Derivatives & Gradients"
+    desc: Analytical first derivatives and gradient vectors for propagation of error.
+    contents:
+      - starts_with("deriv_")
+      - starts_with("dydx_")
+      - starts_with("gradient_")
+      - starts_with("grad_")
+
+
+  - title: "Formulas & Utilities"
+    desc: Shared formula helpers, validators, and low-level utilities.
+    contents:
+      - starts_with("formula_")
+      - adaptive_constraint_profile
+      - starts_with("check_")
+      - starts_with("validate_")
+      - starts_with("assert_")
+
+  - title: "Compare frequentist & bayesian"
+    desc: Shared formula helpers, validators, and low-level utilities.
+    contents:
+      - agreement_metrics
+      - starts_with("compare_")
+
+news:
+  one_page: true

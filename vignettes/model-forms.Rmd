@@ -21,6 +21,10 @@ knitr::opts_chunk$set(
   comment   = "#>",
   fig.align = "center"
 )
+
+# From GitHub:
+# devtools::install_github("immunoplex/curveRcore")
+
 library(curveRcore)
 ```
 

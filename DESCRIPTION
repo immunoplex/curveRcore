@@ -23,7 +23,7 @@ Description: Foundation package for the curveR ecosystem. Provides the five
     calibration_result S3 output class. Both curveRfreq (frequentist) and
     curveRbayes (Bayesian) depend on this package for model math, ensuring
     exact parameterisation parity across statistical frameworks.
-URL: https://github.com/immunoplex/curveRcore
+URL: https://github.com/immunoplex/curveRcore, https://immunoplex.github.io/curveRcore/
 BugReports: https://github.com/immunoplex/curveRcore/issues
 Imports:
     stats
@@ -32,7 +32,8 @@ Suggests:
     knitr,
     rmarkdown,
     curveRfreq,
-    curveRbayes
+    curveRbayes,
+    curveRweights
 VignetteBuilder: knitr
 License: AGPL (>= 3)
 LazyData: true

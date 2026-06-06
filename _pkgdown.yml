@@ -1,0 +1,149 @@
+url: https://immunoplex.github.io/curveRcore/
+
+template:
+  bootstrap: 5.0
+  bootswatch: flatly
+
+reference:
+- title: Forward Models
+  desc: Five canonical sigmoid/saturation model functions.
+  contents:
+  - available_models
+  - model_params
+  - build_nls_formulas
+  - gompertz4
+  - logistic4
+  - logistic5
+  - loglogistic4
+  - loglogistic5
+  - adaptive_constraint_profile
+  - validate_fixed_lower_asymptote
+
+- title: Settings & Configuration
+  desc: Constructor functions for fit settings objects.
+  contents:
+  - new_antigen_constraints
+  - new_calibration_result
+  - new_calibration_result_multiplate
+  - new_fit_options
+  - new_study_params
+  - resolve_effective_models
+  - resolve_fixed_lower_asymptote
+  - resolve_response_col
+
+- title: Calibration Result Class
+  desc: The shared calibration_result S3 class.
+  contents:
+  - agreement_metrics
+  - compare_calibrations
+  - compare_parameters
+  - compare_samples
+  - new_calibration_result
+  - new_calibration_result_multiplate
+
+- title: Tidy Extractors
+  desc: Broom-style helpers for extracting tabular data.
+  contents:
+  - pcov_se_conversion
+  - tidy_grid
+  - tidy_samples
+
+- title: Eligibility & Selection
+  desc: Model gating and best-model selection.
+  contents:
+  - assess_model_eligibility
+  - select_best_eligible
+
+- title: Detection & Quantification Limits
+  desc: LOD, MDC, RDL, and shape-LOQ functions.
+  contents:
+  - compute_detection_limits
+  - compute_detection_limits_multiplate
+  - compute_shape_loq_from_grid
+  - .empty_detection_limits
+  - enrich_grid_with_d2y
+
+- title: Grid & Predictions
+  desc: Prediction grid generation and curve confidence intervals.
+  contents:
+  - compute_curve_ci
+  - generate_prediction_grid
+  - predict_grid_response
+
+- title: Transforms
+  desc: Data transforms applied before fitting.
+  contents:
+  - preprocess_standards
+  - perform_blank_operation
+  - compute_concentration
+  - compute_log_response
+  - correct_prozone
+
+- title: Inverses
+  desc: Back-calculation functions for all five models.
+  contents:
+  - inv_gompertz4
+  - inv_logistic4
+  - inv_logistic5
+  - inv_loglogistic4
+  - inv_loglogistic5
+
+- title: Derivatives & Gradients
+  desc: Analytical derivatives and gradient vectors.
+  contents:
+  - dydx_gompertz4
+  - dydx_logistic4
+  - dydx_logistic5
+  - dydx_loglogistic4
+  - dydx_loglogistic5
+  - d2x_gompertz4
+  - d2x_logistic4
+  - d2x_logistic5
+  - d2x_loglogistic4
+  - d2x_loglogistic5
+  - grad_gompertz4
+  - grad_logistic4
+  - grad_logistic5
+  - grad_loglogistic4
+  - grad_loglogistic5
+  - make_inv_and_grad_fixed
+
+- title: Example data sets
+  desc: Data from immune assays
+  contents:
+  - bead_assay_example
+  - elisa_assay_example
+
+- title: Utilities
+  desc: Internal helpers and shared utilities.
+  contents:
+  - filter_by_curve_id
+  - safe_unique
+  - geom_mean
+  - .extract_param_ci
+  - .fmt_na
+  - .interp_response
+  - .parabolic_refine
+  - .safe_invert_model
+  - .safe_pow10
+
+news:
+  one_page: true
+
+navbar:
+  title: "curveRcore"
+  logo:
+    image: man/figures/logo_small.png   # <-- sticker appears in navbar
+    href: index.html
+  structure:
+    left:
+      - intro
+      - reference
+      - articles
+    right:
+      - search
+      - github
+  components:
+    github:
+      icon: fa-github
+      href: https://github.com/immunoplex/curveR

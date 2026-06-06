@@ -7,3 +7,6 @@
 ^PARAMETERIZATION\.md$
 ^data-raw$
 ^LICENSE\.md$
+^_pkgdown\.yml$
+^pkgdown$
+^\.github$

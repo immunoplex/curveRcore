@@ -1,7 +1,8 @@
 # =============================================================================
 #
-# tidy_extractors.R — extractor constructors to facilitate uniform data access
-# in spoke packages.
+# tidy_extractors.R -- canonical tidy accessors for calibration results,
+# and the single pcov <-> se_concentration conversion. Used by downstream
+# packages (curveRweights) instead of reaching into object internals.
 #
 # ============================================================================
 

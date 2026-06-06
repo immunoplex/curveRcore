@@ -1,0 +1,316 @@
+# Getting Started with curveRcore
+
+### Installation
+
+\`\`\`r \# From GitHub: \#
+devtools::install_github(“immunoplex/curveRcore”)
+
+library(curveRcore) \`\`\`
+
+### Fitting a 4PL curve
+
+\`\`\`r x \<- seq(-2, 2, length.out = 50) \# log10-concentration y \<-
+logistic4(x, a = 100, b = 0.5, c = 0, d = 50000) + rnorm(50, sd = 500)
+
+## Build settings
+
+sp \<- new_study_params() fo \<- new_fit_options(model_names =
+c(“logistic4”, “logistic5”)) ac \<- new_antigen_constraints(“myAntigen”,
+std_curve_conc = 10000) \`\`\`
+
+### Understanding the `calibration_result` Object
+
+Every fitting function in the curveR suite — whether frequentist
+(`curveRfreq`) or Bayesian (`curveRbayes`) — returns a single S3 object
+of class `calibration_result`. The consistent structure means any
+downstream code, plot function, or extraction helper works identically
+regardless of which fitting engine produced it.
+
+``` r
+# Quick overview of a result
+print(cr)
+summary(cr)
+```
+
+The object is a named list with six top-level components:
+
+    cr
+    ├── $meta
+    ├── $ensemble
+    ├── $selection
+    ├── $grid
+    ├── $samples
+    └── $diagnostics
+
+------------------------------------------------------------------------
+
+#### `$meta` — Provenance and fit configuration
+
+`$meta` is a named list that records everything needed to reproduce or
+audit the fit. It is populated at construction time and never modified
+afterwards.
+
+| Field | Type | Description |
+|----|----|----|
+| `method` | character | `"frequentist"` or `"bayesian"` |
+| `package` | character | Fitting package that produced the result (`"curveRfreq"` or `"curveRbayes"`) |
+| `version` | character | Package version string |
+| `curve_id` | character | Unique identifier for this plate/antigen combination |
+| `response_var` | character | Column used as the assay response (`"mfi"` or `"absorbance"`) |
+| `independent_var` | character | Column used as the independent variable (concentration) |
+| `is_log_response` | logical | Whether the response was log₁₀-transformed before fitting |
+| `is_log_independent` | logical | Whether concentration was log₁₀-transformed before fitting |
+| `timestamp` | POSIXct | When the object was created |
+
+Additional fields such as `antigen`, `plate`, and `feature` may be
+present depending on the calling package.
+
+``` r
+cr$meta$method        # "frequentist"
+cr$meta$curve_id      # e.g. "plate1_antigen_A"
+cr$meta$is_log_response  # TRUE
+```
+
+------------------------------------------------------------------------
+
+#### `$ensemble` — All models that were attempted
+
+`$ensemble` is a named list with one entry per model that was fitted,
+keyed by model name (e.g. `"logistic4"`, `"logistic5"`, `"gompertz4"`).
+Even models that failed to converge have an entry, which is important
+for diagnosing why a preferred model was not selected.
+
+Each entry contains:
+
+| Field | Type | Description |
+|----|----|----|
+| `model_name` | character | One of the five canonical model names |
+| `converged` | logical | Whether the optimizer reached a solution |
+| `parameters` | data frame | Parameter estimates with uncertainty (see below) |
+| `fit_stats` | named list | Goodness-of-fit statistics |
+| `eligibility` | named list | Output of [`assess_model_eligibility()`](https://immunoplex.github.io/curveRcore/reference/assess_model_eligibility.md) for this model |
+| `grid` | data frame | Per-model precision profile (same structure as `$grid`) |
+| `raw_fit` | object | The raw fit object from [`nls()`](https://rdrr.io/r/stats/nls.html) or Stan (optional) |
+
+The `parameters` data frame columns differ slightly by framework:
+
+| Framework   | Columns                                                 |
+|-------------|---------------------------------------------------------|
+| Frequentist | `term`, `estimate`, `std_error`, `statistic`, `p.value` |
+| Bayesian    | `term`, `mean`, `sd`, `q2.5`, `q50`, `q97.5`            |
+
+The `fit_stats` list typically contains `aic`, `bic`, `rmse`,
+`r_squared`, and `n_obs` for frequentist fits, and `loo_elpd`, `loo_se`,
+`waic` for Bayesian fits.
+
+``` r
+# Inspect a specific model
+cr$ensemble[["logistic4"]]$converged
+cr$ensemble[["logistic4"]]$parameters
+
+# Check how many models converged
+sapply(cr$ensemble, `[[`, "converged")
+```
+
+------------------------------------------------------------------------
+
+#### `$selection` — Best model choice and eligibility record
+
+`$selection` records the outcome of the two-stage selection process:
+eligibility gating followed by information-criterion ranking. It
+provides full transparency about which models were considered and why
+the winner was chosen.
+
+| Field | Type | Description |
+|----|----|----|
+| `best_model_name` | character | Name of the selected model, or `NA` if none converged |
+| `criterion` | character | Selection criterion used, e.g. `"AIC+eligibility"` or `"LOO+eligibility"` |
+| `fallback` | logical | `TRUE` if no model passed all eligibility gates and the best available was used |
+| `fallback_reason` | character | Human-readable explanation of any gate failures |
+| `eligible_models` | character vector | Names of all models that passed eligibility gating |
+| `assessments` | named list | Full [`assess_model_eligibility()`](https://immunoplex.github.io/curveRcore/reference/assess_model_eligibility.md) output for every model |
+
+The `assessments` sub-list is particularly useful for diagnosing problem
+plates. Each model’s assessment contains a `gates` data frame with
+columns `gate`, `passed`, and `detail`, covering four checks:
+
+- **`at_bound`** — no parameter estimate is sitting on a constraint
+  boundary
+- **`vcov_condition`** — the covariance matrix condition number is below
+  10⁸
+- **`rel_se`** — all parameters have relative SE (SE / \|estimate\|)
+  below the threshold
+- **`dynamic_range`** — the LLOQ-to-ULOQ span at the pcov threshold is
+  at least 0.5 log₁₀ units (~3-fold)
+
+``` r
+cr$selection$best_model_name      # "logistic5"
+cr$selection$criterion            # "AIC+eligibility"
+cr$selection$fallback             # FALSE
+
+# Why was logistic4 rejected?
+cr$selection$assessments[["logistic4"]]$gates
+#>          gate passed                        detail
+#> 1    at_bound  FALSE    b at lower bound
+#> 2    rel_se    TRUE
+#> 3    dynamic_range TRUE  dynamic range = 2.14 log10
+```
+
+------------------------------------------------------------------------
+
+#### `$grid` — Precision profile of the best model
+
+`$grid` is a data frame of evenly-spaced predictions from the selected
+best model across the full fitted concentration range (default 200
+points, configurable via `new_fit_options(n_grid = ...)`). It is the
+primary input for plotting the calibration curve and for computing
+quantification limits.
+
+| Column | Description |
+|----|----|
+| `log10_concentration` | Concentration on the log₁₀ scale (x-axis) |
+| `concentration` | Concentration on the natural scale |
+| `x_fit` | The actual value passed to the model (equals `log10_concentration` when `is_log_independent = TRUE`) |
+| `predicted_response` | Forward model prediction at each grid point |
+| `se_concentration` | Delta-method SD of back-calculated log₁₀ concentration (the uncapped precision estimate) |
+| `pcov` | Percent coefficient of variation derived from `se_concentration`, capped at `cv_x_max` |
+| `pcov_pass` | Logical; whether `pcov` is below the acceptance threshold |
+| `d2y_dx2` | Second derivative of log₁₀ response with respect to log₁₀ concentration (curvature; used for shape-LOQ detection) |
+
+The relationship between `se_concentration` and `pcov` is:
+
+``` math
+\text{pcov} = \text{se\_concentration} \times \ln(10) \times 100
+```
+
+`se_concentration` is the uncapped, modelling-scale quantity and is what
+downstream variance/weighting models (e.g. `curveRweights`) should
+consume. `pcov` is censored at `cv_x_max` and is intended for
+human-readable QC only.
+
+``` r
+head(cr$grid)
+tidy_grid(cr)          # same, with curve_id attached
+```
+
+For multiplate results,
+[`tidy_grid()`](https://immunoplex.github.io/curveRcore/reference/tidy_grid.md)
+row-binds all plates with a `curve_id` column added automatically.
+
+------------------------------------------------------------------------
+
+#### `$samples` — Back-calculated concentrations for test samples
+
+`$samples` is `NULL` if no test samples were supplied to the fitting
+function. When samples are present it is a data frame with one row per
+sample replicate, containing all original sample columns passed in plus
+the back-calculated outputs:
+
+| Column | Description |
+|----|----|
+| `sampleid` | Sample identifier (carried through from input) |
+| `curve_id` | Plate/antigen identifier |
+| `predicted_log10_concentration` | Back-calculated concentration on the log₁₀ scale |
+| `final_concentration` | Back-calculated concentration on the natural scale |
+| `se_concentration` | Delta-method SD of `predicted_log10_concentration` |
+| `pcov` | Percent CV of the back-calculated concentration, capped at `cv_x_max` |
+| `pcov_pass` | Logical; whether precision meets the acceptance threshold |
+
+Any additional columns present in the original sample data (dilution,
+observed response, replicate number, etc.) are carried through
+unchanged.
+
+``` r
+cr$samples[, c("sampleid", "final_concentration", "pcov", "pcov_pass")]
+tidy_samples(cr)       # same, with curve_id attached
+```
+
+Paired frequentist and Bayesian results can be compared directly:
+
+``` r
+compare_samples(cr_freq, cr_bayes)
+```
+
+which returns a merged data frame with both sets of predictions and
+agreement columns (`conc_diff`, `conc_abs_diff`).
+
+------------------------------------------------------------------------
+
+#### `$diagnostics` — Inflection point and quantification limits
+
+`$diagnostics` is `NULL` if diagnostics have not been computed, and a
+named list once
+[`compute_detection_limits()`](https://immunoplex.github.io/curveRcore/reference/compute_detection_limits.md)
+has been called (either automatically inside the fitting pipeline or
+post-hoc by the user):
+
+``` r
+cr <- compute_detection_limits(cr)
+```
+
+The list has two nested sub-lists:
+
+**Inflection point** (populated during fitting):
+
+| Field | Description |
+|----|----|
+| `inflection_point$x` | log₁₀ concentration at the curve inflection point |
+| `inflection_point$y` | Predicted response at the inflection point |
+| `lloq` | Lower limit of quantification on the log₁₀ concentration scale |
+| `uloq` | Upper limit of quantification on the log₁₀ concentration scale |
+
+**`$detection_limits`** (populated by
+[`compute_detection_limits()`](https://immunoplex.github.io/curveRcore/reference/compute_detection_limits.md)):
+
+*LODs* — derived from the confidence interval on the lower asymptote
+(`a`) and upper asymptote (`d`):
+
+| Field | Description |
+|----|----|
+| `lods$lower_lod_response` | Response threshold defining the lower LOD (upper CI of `a`) |
+| `lods$upper_lod_response` | Response threshold defining the upper LOD (lower CI of `d`) |
+| `lods$lower_lod_log10_conc` | Lower LOD mapped to log₁₀ concentration |
+| `lods$upper_lod_log10_conc` | Upper LOD mapped to log₁₀ concentration |
+| `lods$lower_lod_conc` | Lower LOD on the natural concentration scale |
+| `lods$upper_lod_conc` | Upper LOD on the natural concentration scale |
+
+*MDC and RDL* — minimum detectable concentration and reliable detection
+limit, derived by inverting CI-modified versions of the fitted curve:
+
+| Field | Description |
+|----|----|
+| `mdc_rdl$mdc_lower_log10` / `mdc_lower_conc` | Lower MDC in log₁₀ and natural units |
+| `mdc_rdl$mdc_upper_log10` / `mdc_upper_conc` | Upper MDC in log₁₀ and natural units |
+| `mdc_rdl$rdl_lower_log10` / `rdl_lower_conc` | Lower RDL in log₁₀ and natural units |
+| `mdc_rdl$rdl_upper_log10` / `rdl_upper_conc` | Upper RDL in log₁₀ and natural units |
+
+``` r
+cr$diagnostics$inflection_point
+cr$diagnostics$lloq
+cr$diagnostics$uloq
+
+cr$detection_limits$lods$lower_lod_conc
+cr$detection_limits$mdc_rdl$rdl_lower_conc
+```
+
+------------------------------------------------------------------------
+
+#### `calibration_result_multiplate`
+
+When multiple plates are fitted together, the result is a
+`calibration_result_multiplate` object: a named list with a `$meta`
+field and a `$plates` list, where each element is a complete
+single-plate `calibration_result`.
+
+``` r
+mp$plates[["plate1"]]   # a full calibration_result
+```
+
+The tidy extractors dispatch automatically to the multiplate class,
+binding all plates into a single data frame:
+
+``` r
+tidy_samples(mp)   # all sample predictions, one row per replicate, with curve_id
+tidy_grid(mp)      # all precision profiles, with curve_id
+compute_detection_limits_multiplate(mp)   # detection limits for every plate
+```
