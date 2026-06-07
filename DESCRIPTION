@@ -29,6 +29,7 @@ Remotes:
     immunoplex/curveRfreq,
     immunoplex/curveRbayes,
     immunoplex/curveRweights
+Additional_repositories: https://stan-dev.r-universe.dev
 Imports:
     stats
 Suggests:

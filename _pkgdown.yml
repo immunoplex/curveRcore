@@ -27,6 +27,7 @@ navbar:
     github:
       icon: fa-github
       href: https://github.com/immunoplex/curveRcore
+      aria-label: GitHub
 
 reference:
 - title: Forward Models
