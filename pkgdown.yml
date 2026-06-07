@@ -1,0 +1,10 @@
+pandoc: 3.8.3
+pkgdown: 2.2.0
+pkgdown_sha: ~
+articles:
+  getting-started: getting-started.html
+  model-forms: model-forms.html
+last_built: 2026-06-07T01:10Z
+urls:
+  reference: https://immunoplex.github.io/curveRcore/reference
+  article: https://immunoplex.github.io/curveRcore/articles
