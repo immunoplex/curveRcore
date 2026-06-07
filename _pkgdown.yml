@@ -12,7 +12,7 @@ navbar:
   title: "curveRcore"
   logo:
     image: man/figures/logo_small.png   # <-- sticker appears in navbar
-    alt: curveRfreq logo
+    alt: curveRcore logo
     width: 200px
     href: index.html
   structure:

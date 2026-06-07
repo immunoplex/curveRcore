@@ -25,6 +25,10 @@ Description: Foundation package for the curveR ecosystem. Provides the five
     exact parameterisation parity across statistical frameworks.
 URL: https://github.com/immunoplex/curveRcore, https://immunoplex.github.io/curveRcore/
 BugReports: https://github.com/immunoplex/curveRcore/issues
+Remotes:
+    immunoplex/curveRfreq,
+    immunoplex/curveRbayes,
+    immunoplex/curveRweights
 Imports:
     stats
 Suggests:
