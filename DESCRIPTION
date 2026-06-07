@@ -28,7 +28,8 @@ BugReports: https://github.com/immunoplex/curveRcore/issues
 Remotes:
     immunoplex/curveRfreq,
     immunoplex/curveRbayes,
-    immunoplex/curveRweights
+    immunoplex/curveRweights,
+    stan-dev/cmdstanr
 Additional_repositories: https://stan-dev.r-universe.dev
 Imports:
     stats
