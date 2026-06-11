@@ -22,8 +22,8 @@ identically regardless of which engine produced the result.
 
 For a complete end-to-end frequentist workflow, including the NLS
 algorithm, multi-start fitting, and sample back-calculation, see
-`vignette("frequentist-quickstart", package = "curveRfreq")`. This
-vignette covers the **curveRcore layer** that both engines share.
+[`vignette("frequentist-quickstart", package = "curveRfreq")`](https://immunoplex.github.io/curveRfreq/articles/frequentist-quickstart.html).
+This vignette covers the **curveRcore layer** that both engines share.
 
 ------------------------------------------------------------------------
 

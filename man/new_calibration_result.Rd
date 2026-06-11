@@ -10,7 +10,8 @@ new_calibration_result(
   selection = list(),
   grid = data.frame(),
   samples = NULL,
-  diagnostics = NULL
+  diagnostics = NULL,
+  standards = NULL
 )
 }
 \arguments{
@@ -33,6 +34,9 @@ or NULL if no samples were provided.}
 
 \item{diagnostics}{Named list of diagnostic quantities (inflection point,
 LODs, LOQs, etc.), or NULL.}
+
+\item{standards}{Data frame of standard data used to fit the curve,
+or NULL if not provided.}
 }
 \value{
 An object of class \code{calibration_result}.

@@ -27,6 +27,10 @@
 #'   or NULL if no samples were provided.
 #' @param diagnostics Named list of diagnostic quantities (inflection point,
 #'   LODs, LOQs, etc.), or NULL.
+#' @param standards Data frame of standard data used to fit the curve,
+#'   or NULL if not provided.
+#' @param blanks Data frame of blank data used for QA,
+#'   or NULL if not provided.
 #'
 #' @return An object of class `calibration_result`.
 #'
@@ -36,7 +40,9 @@ new_calibration_result <- function(meta,
                                    selection  = list(),
                                    grid       = data.frame(),
                                    samples    = NULL,
-                                   diagnostics = NULL) {
+                                   diagnostics = NULL,
+                                   standards = NULL,
+                                   blanks = NULL) {
 
   # Validate required meta fields
   required_meta <- c("method", "package", "curve_id",
@@ -61,7 +67,9 @@ new_calibration_result <- function(meta,
     selection   = selection,
     grid        = grid,
     samples     = samples,
-    diagnostics = diagnostics
+    diagnostics = diagnostics,
+    standards = standards,
+    blanks = blanks
   )
   class(out) <- c("calibration_result", "list")
   out
@@ -86,6 +94,12 @@ print.calibration_result <- function(x, ...) {
   }
 
   cat(sprintf("  Grid     : %d points\n", nrow(x$grid)))
+  if (!is.null(x$standards)) {
+    cat(sprintf("  Standards: %d points\n", nrow(x$standards)))
+  }
+  if (!is.null(x$blanks)) {
+    cat(sprintf("  Blanks: %d points\n", nrow(x$blanks)))
+  }
   if (!is.null(x$samples)) {
     cat(sprintf("  Samples  : %d predicted\n", nrow(x$samples)))
   }
