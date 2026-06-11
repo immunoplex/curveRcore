@@ -55,7 +55,8 @@ canonical output of both <code>fit_calibration_freq()</code> (curveRfreq) and
 <span>  selection <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  samples <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  diagnostics <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  diagnostics <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  standards <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -93,6 +94,11 @@ or NULL if no samples were provided.</p></dd>
 <dt id="arg-diagnostics">diagnostics<a class="anchor" aria-label="anchor" href="#arg-diagnostics"></a></dt>
 <dd><p>Named list of diagnostic quantities (inflection point,
 LODs, LOQs, etc.), or NULL.</p></dd>
+
+
+<dt id="arg-standards">standards<a class="anchor" aria-label="anchor" href="#arg-standards"></a></dt>
+<dd><p>Data frame of standard data used to fit the curve,
+or NULL if not provided.</p></dd>
 
 </dl></div>
     <div class="section level2">

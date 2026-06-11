@@ -13,7 +13,8 @@ new_calibration_result(
   selection = list(),
   grid = data.frame(),
   samples = NULL,
-  diagnostics = NULL
+  diagnostics = NULL,
+  standards = NULL
 )
 ```
 
@@ -50,6 +51,11 @@ new_calibration_result(
 
   Named list of diagnostic quantities (inflection point, LODs, LOQs,
   etc.), or NULL.
+
+- standards:
+
+  Data frame of standard data used to fit the curve, or NULL if not
+  provided.
 
 ## Value
 
