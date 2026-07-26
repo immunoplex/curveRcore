@@ -8,7 +8,8 @@ include_blanks_conc(
   blank_data,
   data,
   response_variable,
-  independent_variable = "concentration"
+  independent_variable = "concentration",
+  include_col = "included"
 )
 }
 \arguments{
@@ -19,12 +20,17 @@ include_blanks_conc(
 \item{response_variable}{Character. Response column name.}
 
 \item{independent_variable}{Character. Concentration column name.}
+
+\item{include_col}{Character. Logical column marking fitted rows on both
+frames. Absent = all rows included.}
 }
 \value{
 \code{data} with one additional row.
 }
 \description{
 Appends a synthetic row whose response is the geometric mean of the
-blanks and whose concentration is half the minimum standard.
+\emph{included} blanks and whose concentration is \code{log10(2)} below the minimum
+\emph{included} standard concentration. The appended row is itself a fit point,
+so its \code{included} flag is set to \code{TRUE}.
 }
 \keyword{internal}

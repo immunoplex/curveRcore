@@ -334,7 +334,8 @@ one of five blank strategies: <code>"ignored"</code> (default),
 <li>
 <strong><code><a href="../reference/compute_log_response.html">compute_log_response()</a></code></strong> — applies
 <code><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10()</a></code> to the response. Values ≤ 0 are floored to 1 % of
-the minimum positive value before transformation.</li>
+the minimum positive value <em>among the included points</em> before
+transformation.</li>
 </ol>
 <blockquote>
 <p><strong>Key contract:</strong> After
@@ -377,6 +378,92 @@ engines expect.</p>
 <span><span class="co">#&gt; 1.4        1   -0.04575749 3.616883</span></span>
 <span><span class="co">#&gt; 1.5        1    0.47712125 4.094851</span></span>
 <span><span class="co">#&gt; 1.6        1    0.95424251 4.276834</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="mask-aware-preprocessing">Mask-aware preprocessing<a class="anchor" aria-label="anchor" href="#mask-aware-preprocessing"></a>
+</h3>
+<p><code><a href="../reference/preprocess_standards.html">preprocess_standards()</a></code> understands an optional
+<code>include_col</code> (default <code>"included"</code>): a logical
+column marking which rows entered the fit (<code>TRUE</code>) versus
+which were masked out (<code>FALSE</code>). The rule is simple and
+strict:</p>
+<blockquote>
+<p><strong>Statistics from the included points; transforms applied to
+every row.</strong> The prozone peak, the blank geometric mean, the
+adaptive log floor, and the minimum-concentration anchor are all
+computed from the <em>included</em> rows only. The resulting transforms
+are then applied to <em>all</em> rows, so masked points land on exactly
+the same axes as the fitted points without ever influencing them.</p>
+</blockquote>
+<p>Masked rows are never dropped — they are transformed and returned so
+that downstream code (e.g. an app overlaying the observed points on the
+fitted curve) can plot them on the same axes and colour them by status.
+If the column is absent, every row is treated as included and the output
+is identical to the column-free behaviour. Fitting engines are expected
+to receive only the included subset:</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">pp</span>   <span class="op">&lt;-</span> <span class="fu"><a href="../reference/preprocess_standards.html">preprocess_standards</a></span><span class="op">(</span><span class="va">std_with_included</span>, antigen_settings <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">...</span><span class="op">)</span>,</span>
+<span>                             response_variable <span class="op">=</span> <span class="st">"mfi"</span>,</span>
+<span>                             independent_variable <span class="op">=</span> <span class="st">"concentration"</span>,</span>
+<span>                             is_log_response <span class="op">=</span> <span class="cn">TRUE</span>, include_col <span class="op">=</span> <span class="st">"included"</span><span class="op">)</span></span>
+<span><span class="co"># Feed the fitter the included rows only — the fit is identical to one that</span></span>
+<span><span class="co"># never saw the masked rows:</span></span>
+<span><span class="va">fit_input</span> <span class="op">&lt;-</span> <span class="va">pp</span><span class="op">$</span><span class="va">data</span><span class="op">[</span><span class="va">pp</span><span class="op">$</span><span class="va">data</span><span class="op">$</span><span class="va">included</span>, <span class="op">]</span></span></code></pre></div>
+</div>
+<div class="section level3">
+<h3 id="the-return-shape">The return shape<a class="anchor" aria-label="anchor" href="#the-return-shape"></a>
+</h3>
+<p><code><a href="../reference/preprocess_standards.html">preprocess_standards()</a></code> returns a named list:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Element</th>
+<th>Contents</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>data</code></td>
+<td>All standard rows, transformed, carrying <code>included</code>, the
+log₁₀ <code>concentration</code>, the model-space response, and a
+pristine <code>assay_response_raw</code>.</td>
+</tr>
+<tr class="even">
+<td><code>blanks</code></td>
+<td>All blank rows, transformed onto the <em>standards’</em> response
+floor, with <code>included</code> and <code>assay_response_raw</code>;
+<code>NULL</code> when no blanks were supplied.</td>
+</tr>
+<tr class="odd">
+<td><code>antigen_fit_options</code></td>
+<td>Record of the options used (<code>is_log_response</code>,
+<code>blank_option</code>, <code>is_log_concentration</code>,
+<code>apply_prozone</code>).</td>
+</tr>
+<tr class="even">
+<td><code>derived_stats</code></td>
+<td>The set-level statistics computed from the included points:
+<code>blank_geomean</code>, <code>prozone_peak_response</code>,
+<code>prozone_logc_at_peak</code>, <code>response_floor</code>,
+<code>min_included_concentration</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>The two frames and the raw/model-space response columns are exactly
+what the batch worker persists into the <code>calib_standards</code> /
+<code>calib_blanks</code> tables (one row per observed well, tagged with
+<code>included</code> and an <code>exclusion_reason</code>), so a
+consumer can reconstruct the observed curve with perfect fidelity
+without re-deriving any transform.</p>
+<p>Note that <strong>blanks are never subtracted automatically</strong>.
+Under the default <code>blank_option = "ignored"</code> the standard
+responses are left as-is and the returned blanks are transformed for
+display only. Only the explicit <code>"subtracted"</code>,
+<code>"subtracted_3x"</code>, and <code>"subtracted_10x"</code> options
+subtract the included-blank geometric mean from the standards;
+<code>"included"</code> adds it as an extra low-concentration point.</p>
+</div>
 <div class="section level3">
 <h3 id="adaptive-constraint-profile">Adaptive constraint profile<a class="anchor" aria-label="anchor" href="#adaptive-constraint-profile"></a>
 </h3>
@@ -422,7 +509,7 @@ custom constraint workflows.</p>
 <p>Every fitting function in the curveR suite returns a single S3 object
 of class <code>calibration_result</code>. The structure is defined here
 in curveRcore; the fitting engines populate it.</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># After fitting (e.g. via curveRfreq):</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span>    <span class="co"># concise summary</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span>  <span class="co"># model selection table + best-model parameters</span></span></code></pre></div>
@@ -507,7 +594,7 @@ never modified afterwards.</p>
 <code>n_standards</code>, <code>n_samples</code>, and
 <code>pcov_threshold</code> may be present depending on the calling
 package.</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">meta</span><span class="op">$</span><span class="va">method</span>           <span class="co"># "frequentist"</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">meta</span><span class="op">$</span><span class="va">curve_id</span>         <span class="co"># e.g. "plate1_antigen_A"</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">meta</span><span class="op">$</span><span class="va">is_log_response</span>  <span class="co"># TRUE</span></span></code></pre></div>
@@ -614,7 +701,7 @@ can be inspected directly (see Section 6 below). The top-level
 <code>$grid</code> is simply a pointer to the best-model’s grid — no
 recomputation occurs.</p>
 </blockquote>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Check convergence across all models</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span>, <span class="va">`[[`</span>, <span class="st">"converged"</span><span class="op">)</span></span>
 <span></span>
@@ -693,7 +780,7 @@ model</td>
 </table>
 <p>When <code>aic_best != best_model_name</code>, the AIC winner was
 demoted by a gate failure — a useful diagnostic for problem plates.</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">selection</span><span class="op">$</span><span class="va">best_model_name</span>   <span class="co"># "gompertz4"</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">selection</span><span class="op">$</span><span class="va">criterion</span>         <span class="co"># "AIC+eligibility"</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">selection</span><span class="op">$</span><span class="va">fallback</span>          <span class="co"># FALSE</span></span>
@@ -789,7 +876,7 @@ only.</p>
 <p>Use <code><a href="../reference/pcov_se_conversion.html">pcov_from_se()</a></code> and <code><a href="../reference/pcov_se_conversion.html">se_from_pcov()</a></code> — the
 single canonical implementation of this conversion — rather than
 reimplementing it:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Convert a vector of se_concentration values to pcov</span></span>
 <span><span class="va">se_vals</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.05</span>, <span class="fl">0.08</span>, <span class="fl">0.15</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/pcov_se_conversion.html">pcov_from_se</a></span><span class="op">(</span><span class="va">se_vals</span><span class="op">)</span>    <span class="co"># → percent CV values</span></span>
@@ -798,7 +885,7 @@ reimplementing it:</p>
 <span><span class="co"># And back</span></span>
 <span><span class="fu"><a href="../reference/pcov_se_conversion.html">se_from_pcov</a></span><span class="op">(</span><span class="fu"><a href="../reference/pcov_se_conversion.html">pcov_from_se</a></span><span class="op">(</span><span class="va">se_vals</span><span class="op">)</span><span class="op">)</span>   <span class="co"># round-trips exactly</span></span>
 <span><span class="co">#&gt; [1] 0.05 0.08 0.15</span></span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">grid</span><span class="op">)</span></span>
 <span><span class="fu"><a href="../reference/tidy_grid.html">tidy_grid</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span>   <span class="co"># same, with curve_id column attached</span></span></code></pre></div>
 <hr>
@@ -871,7 +958,7 @@ frame with one row per sample replicate:</p>
 </table>
 <p>Any additional columns present in the original sample data (dilution,
 replicate number, patient ID, etc.) are carried through unchanged.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">samples</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sampleid"</span>, <span class="st">"final_concentration"</span>, <span class="st">"pcov"</span>, <span class="st">"pcov_pass"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="fu"><a href="../reference/tidy_samples.html">tidy_samples</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span>   <span class="co"># same, with curve_id column attached</span></span></code></pre></div>
 <hr>
@@ -883,7 +970,7 @@ replicate number, patient ID, etc.) are carried through unchanged.</p>
 <p><code>$detection_limits</code> is <code>NULL</code> by default and is
 populated by calling <code><a href="../reference/compute_detection_limits.html">compute_detection_limits()</a></code>, either
 automatically inside the fitting pipeline or post-hoc:</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cr</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute_detection_limits.html">compute_detection_limits</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span></span></code></pre></div>
 <p>The list has two sub-lists.</p>
 <p><strong><code>$lods</code></strong> — derived from the confidence
@@ -966,12 +1053,12 @@ CI-modified versions of the fitted curve:</p>
 </tr>
 </tbody>
 </table>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">cr</span><span class="op">$</span><span class="va">detection_limits</span><span class="op">$</span><span class="va">lods</span><span class="op">$</span><span class="va">lower_lod_conc</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">detection_limits</span><span class="op">$</span><span class="va">lods</span><span class="op">$</span><span class="va">upper_lod_conc</span></span>
 <span><span class="va">cr</span><span class="op">$</span><span class="va">detection_limits</span><span class="op">$</span><span class="va">mdc_rdl</span><span class="op">$</span><span class="va">rdl_lower_conc</span></span></code></pre></div>
 <p>For multiplate results, use the convenience wrapper:</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute_detection_limits_multiplate.html">compute_detection_limits_multiplate</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
@@ -1057,7 +1144,7 @@ should be treated with caution.</p>
 <code>ensemble[[model]]$eligibility</code>. The <code>$gates</code> data
 frame has columns <code>gate</code>, <code>passed</code>, and
 <code>detail</code>:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">for</span> <span class="op">(</span><span class="va">nm</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">elig</span> <span class="op">&lt;-</span> <span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span><span class="op">[[</span><span class="va">nm</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">eligibility</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"\n── %s  (eligible = %s) ──\n"</span>, <span class="va">nm</span>, <span class="va">elig</span><span class="op">$</span><span class="va">eligible</span><span class="op">)</span><span class="op">)</span></span>
@@ -1120,7 +1207,7 @@ observation noise.</li>
 the curve changes curvature most rapidly, independent of measurement
 uncertainty. It typically gives a tighter (narrower) range.</li>
 </ul>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">best_nm</span>  <span class="op">&lt;-</span> <span class="va">cr</span><span class="op">$</span><span class="va">selection</span><span class="op">$</span><span class="va">best_model_name</span></span>
 <span><span class="va">elig</span>     <span class="op">&lt;-</span> <span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span><span class="op">[[</span><span class="va">best_nm</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">eligibility</span></span>
 <span></span>
@@ -1145,7 +1232,7 @@ both the single-plate and multiplate classes.</p>
 <h3 id="tidy_samples-sample-predictions">
 <code>tidy_samples()</code> — sample predictions<a class="anchor" aria-label="anchor" href="#tidy_samples-sample-predictions"></a>
 </h3>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Single plate</span></span>
 <span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy_samples.html">tidy_samples</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span></span>
 <span></span>
@@ -1158,7 +1245,7 @@ both the single-plate and multiplate classes.</p>
 <h3 id="tidy_grid-precision-profiles">
 <code>tidy_grid()</code> — precision profiles<a class="anchor" aria-label="anchor" href="#tidy_grid-precision-profiles"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Best-model grid for a single plate</span></span>
 <span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy_grid.html">tidy_grid</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span></span>
 <span></span>
@@ -1177,7 +1264,7 @@ both the single-plate and multiplate classes.</p>
 <code>calibration_result_multiplate</code> object — a named list with
 <code>$meta</code> and <code>$plates</code>, where each element is a
 complete single-plate <code>calibration_result</code>.</p>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mp</span><span class="op">$</span><span class="va">plates</span><span class="op">[[</span><span class="st">"1"</span><span class="op">]</span><span class="op">]</span>   <span class="co"># a full calibration_result for curve_id 1</span></span>
 <span></span>
 <span><span class="co"># Global metadata</span></span>
@@ -1195,7 +1282,7 @@ complete single-plate <code>calibration_result</code>.</p>
 </h2>
 <p>When the same data has been fitted by both curveRfreq and
 curveRbayes, three comparison utilities are available:</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Merge prediction grids (columns prefixed by method name)</span></span>
 <span><span class="fu"><a href="../reference/compare_calibrations.html">compare_calibrations</a></span><span class="op">(</span><span class="va">cr_freq</span>, <span class="va">cr_bayes</span><span class="op">)</span></span>
 <span></span>

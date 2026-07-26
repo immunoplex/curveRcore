@@ -22,6 +22,8 @@ perform_blank_operation(
   independent_variable,
   is_log_response,
   blank_option = "ignored",
+  include_col = "included",
+  blank_mean = NULL,
   verbose = FALSE
 )
 ```
@@ -52,13 +54,30 @@ perform_blank_operation(
 
   Character. One of the five options above.
 
+- include_col:
+
+  Character. Logical column marking fitted rows on `blank_data` (and,
+  for the `"included"` option, on `data`). Absent = all rows included
+  (backward compatible).
+
+- blank_mean:
+
+  Numeric or NULL. Pre-computed geometric mean of the *included* blanks.
+  When NULL it is computed here from
+  `blank_data[included, response_variable]`. Supplying it lets a caller
+  guarantee the value used matches the one it records in
+  `derived_stats`.
+
 - verbose:
 
   Logical.
 
 ## Value
 
-`data` with the blank operation applied.
+`data` with the blank operation applied. Blanks are *not* modified here;
+[`preprocess_standards()`](https://immunoplex.github.io/curveRcore/reference/preprocess_standards.md)
+transforms and returns them separately so they share the standards'
+response floor.
 
 ## Details
 

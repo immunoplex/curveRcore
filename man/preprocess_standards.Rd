@@ -2,7 +2,7 @@
 % Please edit documentation in R/transforms.R
 \name{preprocess_standards}
 \alias{preprocess_standards}
-\title{Full Preprocessing Pipeline for Standard Curve Data}
+\title{Full Preprocessing Pipeline for Standard Curve Data (mask-aware)}
 \usage{
 preprocess_standards(
   data,
@@ -14,6 +14,7 @@ preprocess_standards(
   blank_option = "ignored",
   is_log_independent = TRUE,
   apply_prozone = TRUE,
+  include_col = "included",
   verbose = FALSE
 )
 }
@@ -36,13 +37,56 @@ preprocess_standards(
 
 \item{apply_prozone}{Logical. Apply prozone correction?}
 
+\item{include_col}{Character. Name of the logical include/mask column on
+\code{data} and \code{blank_data}. Absent on a frame = all its rows are included.}
+
 \item{verbose}{Logical.}
 }
 \value{
-A list with \code{data} (preprocessed) and \code{antigen_fit_options} (a
-record of the options used).
+A named list:
+\describe{
+\item{\code{data}}{All standard rows, transformed, carrying \code{include_col},
+the (log10) \code{concentration}, the model-space response, and
+\code{assay_response_raw}.}
+\item{\code{blanks}}{All blank rows, transformed onto the standards' response
+floor, carrying \code{include_col}, the model-space response, and
+\code{assay_response_raw}; \code{NULL} when no \code{blank_data} was supplied.}
+\item{\code{antigen_fit_options}}{Record of the options used.}
+\item{\code{derived_stats}}{The set-level statistics computed from the
+included points: \code{blank_geomean}, \code{prozone_peak_response},
+\code{prozone_logc_at_peak}, \code{response_floor}, \code{min_included_concentration}.}
+}
 }
 \description{
 Applies concentration computation, prozone correction, blank handling,
 and optional log10 response transform in the canonical order.
+}
+\details{
+\strong{Mask-aware contract.} An \code{include_col} logical column (default
+\code{"included"}, \code{TRUE} = used in the fit, \code{FALSE} = masked) may be present on
+\code{data} and \code{blank_data}. Every \emph{set-level statistic} — the prozone peak, the
+blank geometric mean, the adaptive log floor, and the minimum-concentration
+anchor — is computed from the \strong{included} rows only. The resulting
+transforms are then applied to \strong{all} rows, so masked points land on the
+same axes as the fitted points without ever influencing them. If the column
+is absent, every row is treated as included and the output is identical to
+the pre-mask behaviour (backward compatible).
+
+The function does \strong{not} drop masked rows; downstream fitters are expected
+to receive only the included subset (e.g. \code{pp$data[pp$data$included, ]}),
+which keeps the fit byte-identical to a fit that never saw the masked rows.
+
+Both frames retain a pristine \code{assay_response_raw} column (the response
+before prozone/blank/log), so callers can persist the raw and model-space
+responses side by side.
+
+\strong{Blanks are never subtracted automatically.} With the default
+\code{blank_option = "ignored"} the standard responses are left untouched; the
+returned \code{blanks} frame is transformed for display/persistence only and is
+\emph{not} subtracted from the standards. Subtraction happens \strong{only} when the
+caller explicitly selects \code{"subtracted"}, \code{"subtracted_3x"}, or
+\code{"subtracted_10x"} (which subtract 1x/3x/10x the \emph{included}-blank geometric
+mean), or adds the blank mean as a point via \code{"included"}. The returned
+blanks are always the raw and model-space blank responses, never a
+subtracted quantity.
 }

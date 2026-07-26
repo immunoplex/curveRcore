@@ -11,7 +11,8 @@ new_calibration_result(
   grid = data.frame(),
   samples = NULL,
   diagnostics = NULL,
-  standards = NULL
+  standards = NULL,
+  blanks = NULL
 )
 }
 \arguments{
@@ -36,6 +37,9 @@ or NULL if no samples were provided.}
 LODs, LOQs, etc.), or NULL.}
 
 \item{standards}{Data frame of standard data used to fit the curve,
+or NULL if not provided.}
+
+\item{blanks}{Data frame of blank data used for QA,
 or NULL if not provided.}
 }
 \value{

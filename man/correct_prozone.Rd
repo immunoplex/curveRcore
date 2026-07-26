@@ -10,6 +10,7 @@ correct_prozone(
   dil_scale = 2,
   response_variable = "mfi",
   independent_variable = "concentration",
+  include_col = "included",
   verbose = FALSE
 )
 }
@@ -24,12 +25,25 @@ correct_prozone(
 
 \item{independent_variable}{Character. Concentration column name.}
 
+\item{include_col}{Character. Logical column marking fitted rows. Absent =
+all rows included (backward compatible).}
+
 \item{verbose}{Logical.}
 }
 \value{
-\code{stdframe} with post-peak response values adjusted.
+\code{stdframe} (all rows) with post-peak response values adjusted. The
+peak reference is attached as \code{attr(., "prozone_peak_response")} and
+\code{attr(., "prozone_logc_at_peak")}.
 }
 \description{
 At very high concentrations the measured signal can decrease (hook effect).
 This function compresses the post-peak delta toward the peak value.
+}
+\details{
+The peak (\code{max_response} and \code{logc_at_max}) is a \strong{set-level statistic}
+computed from the \emph{included} points only. The post-peak reflection is then
+applied to \strong{all} rows relative to that peak, so masked points beyond the
+hook are dampened onto the same reference as the fitted points. Rows are
+never dropped (grain is preserved); rows with a missing response or
+concentration are passed through untouched.
 }

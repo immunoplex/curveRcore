@@ -68,6 +68,8 @@
 <span>  <span class="va">independent_variable</span>,</span>
 <span>  <span class="va">is_log_response</span>,</span>
 <span>  blank_option <span class="op">=</span> <span class="st">"ignored"</span>,</span>
+<span>  include_col <span class="op">=</span> <span class="st">"included"</span>,</span>
+<span>  blank_mean <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -100,13 +102,28 @@
 <dd><p>Character. One of the five options above.</p></dd>
 
 
+<dt id="arg-include-col">include_col<a class="anchor" aria-label="anchor" href="#arg-include-col"></a></dt>
+<dd><p>Character. Logical column marking fitted rows on
+<code>blank_data</code> (and, for the <code>"included"</code> option, on <code>data</code>). Absent = all
+rows included (backward compatible).</p></dd>
+
+
+<dt id="arg-blank-mean">blank_mean<a class="anchor" aria-label="anchor" href="#arg-blank-mean"></a></dt>
+<dd><p>Numeric or NULL. Pre-computed geometric mean of the
+<em>included</em> blanks. When NULL it is computed here from
+<code>blank_data[included, response_variable]</code>. Supplying it lets a caller
+guarantee the value used matches the one it records in <code>derived_stats</code>.</p></dd>
+
+
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><code>data</code> with the blank operation applied.</p>
+    <p><code>data</code> with the blank operation applied. Blanks are <em>not</em> modified
+here; <code><a href="preprocess_standards.html">preprocess_standards()</a></code> transforms and returns them separately so
+they share the standards' response floor.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>

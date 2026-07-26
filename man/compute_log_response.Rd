@@ -2,12 +2,14 @@
 % Please edit documentation in R/transforms.R
 \name{compute_log_response}
 \alias{compute_log_response}
-\title{Log10-Transform the Assay Response}
+\title{Log10-Transform the Assay Response (mask-aware)}
 \usage{
 compute_log_response(
   data,
   response_variable,
   is_log_response = TRUE,
+  include_col = "included",
+  floor_value = NULL,
   floor_method = "adaptive",
   verbose = FALSE
 )
@@ -19,16 +21,34 @@ compute_log_response(
 
 \item{is_log_response}{Logical. Apply log10? Default \code{TRUE}.}
 
-\item{floor_method}{Character. How to handle non-positive values before
-log10: \code{"adaptive"} (default) uses 1\\% of the minimum positive value;
-\code{"fixed"} uses 1e-6.}
+\item{include_col}{Character. Name of the logical column marking rows that
+entered the fit (\code{TRUE}) versus masked rows (\code{FALSE}). If the column is
+absent, every row is treated as included (backward compatible).}
+
+\item{floor_value}{Numeric or NULL. If supplied, this exact floor is used
+for non-positive values instead of deriving one. Used to share a single
+floor across the standards and blanks frames.}
+
+\item{floor_method}{Character. How to derive the floor when \code{floor_value}
+is NULL: \code{"adaptive"} (default) uses 1\\% of the minimum \emph{included}
+positive value; \code{"fixed"} uses 1e-6.}
 
 \item{verbose}{Logical. Emit messages about floored values.}
 }
 \value{
-\code{data} with the response column optionally transformed.
+\code{data} with the response column optionally transformed. The floor
+actually used is attached as \code{attr(., "response_floor")}.
 }
 \description{
 Applies \code{log10()} to the response column when \code{is_log_response} is TRUE.
 Non-positive values are floored to an adaptive minimum before transform.
+}
+\details{
+The adaptive floor is a \strong{set-level statistic}: it is derived from the
+\emph{included} positive responses only (\code{data[included & value > 0]}), but the
+floor and the \code{log10()} are then applied to \strong{all} rows. This is what lets
+masked points land on the same response axis as the fitted points without
+influencing the transform (see \code{\link[=preprocess_standards]{preprocess_standards()}}). Pass an explicit
+\code{floor_value} to reuse a floor computed elsewhere (e.g. to transform blanks
+on the same axis as the standards).
 }

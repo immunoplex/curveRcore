@@ -11,6 +11,8 @@ perform_blank_operation(
   independent_variable,
   is_log_response,
   blank_option = "ignored",
+  include_col = "included",
+  blank_mean = NULL,
   verbose = FALSE
 )
 }
@@ -27,10 +29,21 @@ perform_blank_operation(
 
 \item{blank_option}{Character. One of the five options above.}
 
+\item{include_col}{Character. Logical column marking fitted rows on
+\code{blank_data} (and, for the \code{"included"} option, on \code{data}). Absent = all
+rows included (backward compatible).}
+
+\item{blank_mean}{Numeric or NULL. Pre-computed geometric mean of the
+\emph{included} blanks. When NULL it is computed here from
+\code{blank_data[included, response_variable]}. Supplying it lets a caller
+guarantee the value used matches the one it records in \code{derived_stats}.}
+
 \item{verbose}{Logical.}
 }
 \value{
-\code{data} with the blank operation applied.
+\code{data} with the blank operation applied. Blanks are \emph{not} modified
+here; \code{\link[=preprocess_standards]{preprocess_standards()}} transforms and returns them separately so
+they share the standards' response floor.
 }
 \description{
 Performs one of five blank-handling strategies:

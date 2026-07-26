@@ -182,8 +182,8 @@ identical scale, making their results directly comparable.
    mean as an extra point), `"subtracted"`, `"subtracted_3x"`, or
    `"subtracted_10x"`.
 4. **`compute_log_response()`** — applies `log10()` to the response.
-   Values ≤ 0 are floored to 1 % of the minimum positive value before
-   transformation.
+   Values ≤ 0 are floored to 1 % of the minimum positive value *among the
+   included points* before transformation.
 
 > **Key contract:** After `preprocess_standards()`, the column named
 > by `independent_variable` holds log₁₀ concentration and the response
@@ -218,6 +218,61 @@ std_preprocessed <- do.call(rbind, lapply(
 # Both columns are now on the log10 scale
 head(std_preprocessed[, c("curve_id", "concentration", "mfi")])
 ```
+
+## Mask-aware preprocessing
+
+`preprocess_standards()` understands an optional `include_col` (default
+`"included"`): a logical column marking which rows entered the fit
+(`TRUE`) versus which were masked out (`FALSE`). The rule is simple and
+strict:
+
+> **Statistics from the included points; transforms applied to every row.**
+> The prozone peak, the blank geometric mean, the adaptive log floor, and
+> the minimum-concentration anchor are all computed from the *included*
+> rows only. The resulting transforms are then applied to *all* rows, so
+> masked points land on exactly the same axes as the fitted points without
+> ever influencing them.
+
+Masked rows are never dropped — they are transformed and returned so that
+downstream code (e.g. an app overlaying the observed points on the fitted
+curve) can plot them on the same axes and colour them by status. If the
+column is absent, every row is treated as included and the output is
+identical to the column-free behaviour. Fitting engines are expected to
+receive only the included subset:
+
+```{r included-subset, eval = FALSE}
+pp   <- preprocess_standards(std_with_included, antigen_settings = list(...),
+                             response_variable = "mfi",
+                             independent_variable = "concentration",
+                             is_log_response = TRUE, include_col = "included")
+# Feed the fitter the included rows only — the fit is identical to one that
+# never saw the masked rows:
+fit_input <- pp$data[pp$data$included, ]
+```
+
+## The return shape
+
+`preprocess_standards()` returns a named list:
+
+| Element | Contents |
+|---|---|
+| `data` | All standard rows, transformed, carrying `included`, the log₁₀ `concentration`, the model-space response, and a pristine `assay_response_raw`. |
+| `blanks` | All blank rows, transformed onto the *standards'* response floor, with `included` and `assay_response_raw`; `NULL` when no blanks were supplied. |
+| `antigen_fit_options` | Record of the options used (`is_log_response`, `blank_option`, `is_log_concentration`, `apply_prozone`). |
+| `derived_stats` | The set-level statistics computed from the included points: `blank_geomean`, `prozone_peak_response`, `prozone_logc_at_peak`, `response_floor`, `min_included_concentration`. |
+
+The two frames and the raw/model-space response columns are exactly what
+the batch worker persists into the `calib_standards` / `calib_blanks`
+tables (one row per observed well, tagged with `included` and an
+`exclusion_reason`), so a consumer can reconstruct the observed curve with
+perfect fidelity without re-deriving any transform.
+
+Note that **blanks are never subtracted automatically**. Under the default
+`blank_option = "ignored"` the standard responses are left as-is and the
+returned blanks are transformed for display only. Only the explicit
+`"subtracted"`, `"subtracted_3x"`, and `"subtracted_10x"` options subtract the
+included-blank geometric mean from the standards; `"included"` adds it as an
+extra low-concentration point.
 
 ## Adaptive constraint profile
 
