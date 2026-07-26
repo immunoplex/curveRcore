@@ -13,6 +13,7 @@ correct_prozone(
   dil_scale = 2,
   response_variable = "mfi",
   independent_variable = "concentration",
+  include_col = "included",
   verbose = FALSE
 )
 ```
@@ -39,10 +40,26 @@ correct_prozone(
 
   Character. Concentration column name.
 
+- include_col:
+
+  Character. Logical column marking fitted rows. Absent = all rows
+  included (backward compatible).
+
 - verbose:
 
   Logical.
 
 ## Value
 
-`stdframe` with post-peak response values adjusted.
+`stdframe` (all rows) with post-peak response values adjusted. The peak
+reference is attached as `attr(., "prozone_peak_response")` and
+`attr(., "prozone_logc_at_peak")`.
+
+## Details
+
+The peak (`max_response` and `logc_at_max`) is a **set-level statistic**
+computed from the *included* points only. The post-peak reflection is
+then applied to **all** rows relative to that peak, so masked points
+beyond the hook are dampened onto the same reference as the fitted
+points. Rows are never dropped (grain is preserved); rows with a missing
+response or concentration are passed through untouched.

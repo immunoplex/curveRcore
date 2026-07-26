@@ -116,13 +116,13 @@ Prediction grid generation and curve confidence intervals.
 Data transforms applied before fitting.
 
 - [`preprocess_standards()`](https://immunoplex.github.io/curveRcore/reference/preprocess_standards.md)
-  : Full Preprocessing Pipeline for Standard Curve Data
+  : Full Preprocessing Pipeline for Standard Curve Data (mask-aware)
 - [`perform_blank_operation()`](https://immunoplex.github.io/curveRcore/reference/perform_blank_operation.md)
   : Apply a Blank Operation to Standard Curve Data
 - [`compute_concentration()`](https://immunoplex.github.io/curveRcore/reference/compute_concentration.md)
   : Compute Concentration from Dilution and Undiluted Standard
 - [`compute_log_response()`](https://immunoplex.github.io/curveRcore/reference/compute_log_response.md)
-  : Log10-Transform the Assay Response
+  : Log10-Transform the Assay Response (mask-aware)
 - [`correct_prozone()`](https://immunoplex.github.io/curveRcore/reference/correct_prozone.md)
   : Correct the Prozone (Hook) Effect
 

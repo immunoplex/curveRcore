@@ -123,12 +123,15 @@
 <span>  blank_option         <span class="op">=</span> <span class="st">"subtracted"</span>,   <span class="co"># "ignored" | "included" | "subtracted"</span></span>
 <span>                                         <span class="co"># "subtracted_3x" | "subtracted_10x"</span></span>
 <span>  is_log_independent   <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  apply_prozone        <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  apply_prozone        <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  include_col          <span class="op">=</span> <span class="st">"included"</span>      <span class="co"># optional logical mask column</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">preprocessed</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">data</span></span>
+<span><span class="va">preprocessed</span> <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">data</span>          <span class="co"># all standard rows, transformed</span></span>
+<span><span class="va">blanks_out</span>   <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">blanks</span>        <span class="co"># all blank rows, transformed (or NULL)</span></span>
+<span><span class="va">stats</span>        <span class="op">&lt;-</span> <span class="va">result</span><span class="op">$</span><span class="va">derived_stats</span> <span class="co"># set-level statistics (see below)</span></span>
 <span><span class="co"># $concentration now holds log10-concentration</span></span>
-<span><span class="co"># $mfi now holds log10-MFI</span></span></code></pre></div>
+<span><span class="co"># $mfi now holds log10-MFI; $assay_response_raw keeps the pristine response</span></span></code></pre></div>
 <table class="table">
 <colgroup>
 <col width="33%">
@@ -163,6 +166,9 @@
 </tr>
 </tbody>
 </table>
+<p><strong>Mask-aware.</strong> An optional <code>include_col</code> (default <code>"included"</code>) marks which rows entered the fit. Every set-level statistic — the prozone peak, the blank geometric mean, the adaptive log floor, and the minimum-concentration anchor — is computed from the <em>included</em> rows only, while the transforms are applied to <em>all</em> rows. Masked rows are transformed and retained (never dropped) so they share the fitted points’ axes; feed a fitter <code>result$data[result$data$included, ]</code> and the fit is byte-identical to one that never saw the masked rows. When the column is absent, every row is treated as included.</p>
+<p><code><a href="reference/preprocess_standards.html">preprocess_standards()</a></code> returns <code>data</code>, <code>blanks</code> (transformed onto the standards’ response floor, or <code>NULL</code>), <code>antigen_fit_options</code>, and <code>derived_stats</code> (<code>blank_geomean</code>, <code>prozone_peak_response</code>, <code>prozone_logc_at_peak</code>, <code>response_floor</code>, <code>min_included_concentration</code>).</p>
+<p><strong>Blanks are never subtracted automatically.</strong> With the default <code>blank_option = "ignored"</code> the standard responses are untouched and the returned <code>blanks</code> are transformed for display/persistence only. Subtraction of the included-blank geometric mean (1×/3×/10×) happens <em>only</em> when the caller explicitly selects <code>"subtracted"</code>, <code>"subtracted_3x"</code>, or <code>"subtracted_10x"</code>; <code>"included"</code> instead adds the blank mean as an extra fit point.</p>
 </div>
 <div class="section level3">
 <h3 id="settings-objects">Settings objects<a class="anchor" aria-label="anchor" href="#settings-objects"></a>
@@ -205,6 +211,9 @@
 ├── $grid         precision profile of the best model (200 points):
 │                 predicted_response, se_concentration, pcov, d2y_dx2
 ├── $samples      back-calculated concentrations for test samples, or NULL
+├── $standards    preprocessed standard points (all rows, with `included` and
+│                 `assay_response_raw`) as fed to / masked from the fit
+├── $blanks       preprocessed blank points (all rows, with `included`), or NULL
 └── $diagnostics  inflection point, LLOQ, ULOQ, LODs, MDC, RDL</code></pre>
 <div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Print a compact summary</span></span>
@@ -401,7 +410,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

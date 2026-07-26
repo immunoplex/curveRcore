@@ -52,6 +52,7 @@ This function compresses the post-peak delta toward the peak value.</p>
 <span>  dil_scale <span class="op">=</span> <span class="fl">2</span>,</span>
 <span>  response_variable <span class="op">=</span> <span class="st">"mfi"</span>,</span>
 <span>  independent_variable <span class="op">=</span> <span class="st">"concentration"</span>,</span>
+<span>  include_col <span class="op">=</span> <span class="st">"included"</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -80,13 +81,29 @@ This function compresses the post-peak delta toward the peak value.</p>
 <dd><p>Character. Concentration column name.</p></dd>
 
 
+<dt id="arg-include-col">include_col<a class="anchor" aria-label="anchor" href="#arg-include-col"></a></dt>
+<dd><p>Character. Logical column marking fitted rows. Absent =
+all rows included (backward compatible).</p></dd>
+
+
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical.</p></dd>
 
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p><code>stdframe</code> with post-peak response values adjusted.</p>
+    <p><code>stdframe</code> (all rows) with post-peak response values adjusted. The
+peak reference is attached as <code>attr(., "prozone_peak_response")</code> and
+<code>attr(., "prozone_logc_at_peak")</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
+    <p>The peak (<code>max_response</code> and <code>logc_at_max</code>) is a <strong>set-level statistic</strong>
+computed from the <em>included</em> points only. The post-peak reflection is then
+applied to <strong>all</strong> rows relative to that peak, so masked points beyond the
+hook are dampened onto the same reference as the fitted points. Rows are
+never dropped (grain is preserved); rows with a missing response or
+concentration are passed through untouched.</p>
     </div>
 
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -98,7 +115,7 @@ This function compresses the post-peak delta toward the peak value.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>
