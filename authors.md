@@ -13,7 +13,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/immunoplex/curveRcore/blob/main/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/immunoplex/curveRcore/blob/v0.3.0/DESCRIPTION)
 
 Zens M, Stein S, Gupta H, Hoen A (2026). *curveRcore: Shared Model
 Mathematics for Immunoassay Calibration Curves*. R package version

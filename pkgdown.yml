@@ -4,7 +4,7 @@ pkgdown_sha: ~
 articles:
   getting-started: getting-started.html
   model-forms: model-forms.html
-last_built: 2026-07-27T02:01Z
+last_built: 2026-07-27T02:05Z
 urls:
   reference: https://immunoplex.github.io/curveRcore/reference
   article: https://immunoplex.github.io/curveRcore/articles
