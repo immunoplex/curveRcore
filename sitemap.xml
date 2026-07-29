@@ -22,6 +22,7 @@
 <url><loc>https://immunoplex.github.io/curveRcore/reference/compute_curve_ci.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/compute_detection_limits.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/compute_detection_limits_multiplate.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/compute_inflection.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/compute_log_response.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/compute_shape_loq_from_grid.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/correct_prozone.html</loc></url>
@@ -30,6 +31,7 @@
 <url><loc>https://immunoplex.github.io/curveRcore/reference/d2x_logistic5.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/d2x_loglogistic4.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/d2x_loglogistic5.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/dot-as_param_vector.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/dot-empty_detection_limits.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/dot-extract_param_ci.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/dot-fmt_na.html</loc></url>
