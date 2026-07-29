@@ -394,10 +394,10 @@ LOD, MDC, RDL, and shape-LOQ functions.
   : Compute detection limits for all plates in a multiplate result
 - [`compute_shape_loq_from_grid()`](https://immunoplex.github.io/curveRcore/reference/compute_shape_loq_from_grid.md)
   : Compute curvature-based (shape) LOQs from an enriched grid
-- [`.empty_detection_limits()`](https://immunoplex.github.io/curveRcore/reference/dot-empty_detection_limits.md)
-  : Empty detection_limits list for non-converged models
 - [`enrich_grid_with_d2y()`](https://immunoplex.github.io/curveRcore/reference/enrich_grid_with_d2y.md)
   : Add a d2y_dx2 column to an existing prediction grid
+- [`compute_inflection()`](https://immunoplex.github.io/curveRcore/reference/compute_inflection.md)
+  : Closed-form inflection point of a calibration model
 
 ## Grid & Predictions
 

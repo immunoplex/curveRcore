@@ -85,8 +85,8 @@ reference:
   - compute_detection_limits
   - compute_detection_limits_multiplate
   - compute_shape_loq_from_grid
-  - .empty_detection_limits
   - enrich_grid_with_d2y
+  - compute_inflection
 
 - title: Grid & Predictions
   desc: Prediction grid generation and curve confidence intervals.

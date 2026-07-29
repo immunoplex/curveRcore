@@ -1,3 +1,13 @@
+# curveRcore 0.4.0 (2026-07-29)
+
+* **Fixed the inflection-point calculation.** `inflect_x` no longer snaps to the
+  flat lower asymptote (~log10(grid_min_conc) = -4). Added `compute_inflection()`,
+  which returns the exact closed-form inflection from the fitted parameters
+  (x = c for logistic4/gompertz4/loglogistic5; x = c + b*ln(g) for logistic5),
+  with y evaluated through the model's own forward function.
+* Hardened the grid-based inflection fallback to locate the steepest point
+  (argmax |dy/dx|) instead of min |d2y/dx2|, making it immune to flat grid tails.
+
 # curveRcore 0.3.0
 
 ## Mask-aware preprocessing
