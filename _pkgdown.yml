@@ -72,6 +72,9 @@ reference:
   - pcov_se_conversion
   - tidy_grid
   - tidy_samples
+  - tidy_hyperparam
+  - tidy_draws
+  - tidy_fit_diag
 
 - title: Eligibility & Selection
   desc: Model gating and best-model selection.

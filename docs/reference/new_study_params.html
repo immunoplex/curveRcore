@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -47,7 +47,9 @@
 <span>  is_log_response <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  is_log_independent <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  apply_prozone <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  blank_option <span class="op">=</span> <span class="st">"ignored"</span></span>
+<span>  blank_option <span class="op">=</span> <span class="st">"ignored"</span>,</span>
+<span>  persist_draws <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  bayes_single_plate <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -74,6 +76,20 @@ Default TRUE.</p></dd>
 <dd><p>Character. Blank handling method. One of
 <code>"ignored"</code>, <code>"included"</code>, <code>"subtracted"</code>, <code>"subtracted_3x"</code>,
 <code>"subtracted_10x"</code>. Default <code>"ignored"</code>.</p></dd>
+
+
+<dt id="arg-persist-draws">persist_draws<a class="anchor" aria-label="anchor" href="#arg-persist-draws"></a></dt>
+<dd><p>Logical. If TRUE, the fitting engine persists the
+full posterior (Bayesian) or asymptotic-MVN (frequentist) parameter
+draws to <code>calib_draws</code>. Heavy output; default FALSE. Gate only — the
+light <code>calib_hyperparam</code>/<code>calib_fit_diag</code> tables are always written.</p></dd>
+
+
+<dt id="arg-bayes-single-plate">bayes_single_plate<a class="anchor" aria-label="anchor" href="#arg-bayes-single-plate"></a></dt>
+<dd><p>Logical. Bayesian only. If TRUE, each plate is
+fit independently (N_plates = 1, no cross-plate pooling) instead of as
+one multiplate hierarchy. Default FALSE (multiplate pooling). The
+frequentist engine is always per-plate and ignores this flag.</p></dd>
 
 </dl></div>
     <div class="section level2">

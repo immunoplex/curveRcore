@@ -71,6 +71,14 @@ new_antigen_constraints <- function(antigen,
 #' @param blank_option Character. Blank handling method. One of
 #'   `"ignored"`, `"included"`, `"subtracted"`, `"subtracted_3x"`,
 #'   `"subtracted_10x"`. Default `"ignored"`.
+#' @param persist_draws Logical. If TRUE, the fitting engine persists the
+#'   full posterior (Bayesian) or asymptotic-MVN (frequentist) parameter
+#'   draws to `calib_draws`. Heavy output; default FALSE. Gate only — the
+#'   light `calib_hyperparam`/`calib_fit_diag` tables are always written.
+#' @param bayes_single_plate Logical. Bayesian only. If TRUE, each plate is
+#'   fit independently (N_plates = 1, no cross-plate pooling) instead of as
+#'   one multiplate hierarchy. Default FALSE (multiplate pooling). The
+#'   frequentist engine is always per-plate and ignores this flag.
 #'
 #' @return A named list of class `study_params`.
 #'
@@ -78,7 +86,9 @@ new_antigen_constraints <- function(antigen,
 new_study_params <- function(is_log_response    = TRUE,
                              is_log_independent = TRUE,
                              apply_prozone      = TRUE,
-                             blank_option       = "ignored") {
+                             blank_option       = "ignored",
+                             persist_draws      = FALSE,
+                             bayes_single_plate = FALSE) {
 
   valid_blanks <- c("ignored", "included", "subtracted",
                     "subtracted_3x", "subtracted_10x")
@@ -86,13 +96,17 @@ new_study_params <- function(is_log_response    = TRUE,
     stop("blank_option must be one of: ", paste(valid_blanks, collapse = ", "))
   }
   stopifnot(is.logical(is_log_response), is.logical(is_log_independent),
-            is.logical(apply_prozone))
+            is.logical(apply_prozone),
+            is.logical(persist_draws),      length(persist_draws) == 1L,
+            is.logical(bayes_single_plate), length(bayes_single_plate) == 1L)
 
   out <- list(
     is_log_response    = is_log_response,
     is_log_independent = is_log_independent,
     apply_prozone      = apply_prozone,
-    blank_option       = blank_option
+    blank_option       = blank_option,
+    persist_draws      = persist_draws,
+    bayes_single_plate = bayes_single_plate
   )
   class(out) <- c("study_params", "list")
   out

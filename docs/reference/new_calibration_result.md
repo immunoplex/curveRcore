@@ -15,7 +15,8 @@ new_calibration_result(
   samples = NULL,
   diagnostics = NULL,
   standards = NULL,
-  blanks = NULL
+  blanks = NULL,
+  population = NULL
 )
 ```
 
@@ -61,6 +62,16 @@ new_calibration_result(
 - blanks:
 
   Data frame of blank data used for QA, or NULL if not provided.
+
+- population:
+
+  Named list or NULL. Per-plate population/noise parameters for
+  per-plate arms (single-plate Bayes: this plate's `sigma_obs`/`nu` and
+  hyperprior-informed `mu_*`; frequentist: `sigma_resid`). Same shape as
+  the multiplate `population` slot (see
+  [`new_calibration_result_multiplate()`](https://immunoplex.github.io/curveRcore/reference/new_calibration_result_multiplate.md)).
+  NULL for the pooled multiplate arm, where group params live on the
+  multiplate container instead.
 
 ## Value
 

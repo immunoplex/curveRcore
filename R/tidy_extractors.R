@@ -148,3 +148,219 @@ tidy_grid.calibration_result_multiplate <- function(x, model = NULL, ...) {
   })
   do.call(rbind, dfs2)
 }
+
+
+# =============================================================================
+# Population / draws / fit-diagnostic accessors (schema-expansion: calib_hyper-
+# param, calib_draws, calib_fit_diag). Same pattern as tidy_samples/tidy_grid:
+# a per-result method + a multiplate method that row-binds with curve_id.
+#
+# Grain rule: the pooled multiplate arm stores group params ONCE on
+# x$population; tidy_hyperparam fans them across the group's curve_ids so they
+# land in the per-curve + FK calib_hyperparam table. Per-plate arms
+# (single-plate Bayes, frequentist) store per-plate population on each plate's
+# own $population, which is emitted with that plate's curve_id (no fan-out).
+# =============================================================================
+
+# ---- .population accessor: normalise a $population slot to a tidy frame ------
+# Returns a data.frame(term, estimate, std_error, q_lo, q_med, q_hi) or NULL.
+.pop_params_df <- function(pop) {
+  if (is.null(pop) || is.null(pop$params) || !nrow(pop$params)) return(NULL)
+  p <- as.data.frame(pop$params)
+  need <- c("term", "estimate", "std_error", "q_lo", "q_med", "q_hi")
+  for (m in setdiff(need, names(p))) p[[m]] <- NA
+  p[need]
+}
+
+
+#' Tidy the population / noise parameters from a calibration result
+#'
+#' Extracts group-level (pooled) or per-plate population/noise parameters
+#' (`mu_*`, `sigma_*`, `sigma_obs`, `nu`, and — frequentist — `sigma_resid`)
+#' into a tidy data frame keyed by `curve_id`, `param_scope = "population"`.
+#' Feeds the `calib_hyperparam` table. Returns a zero-row frame when the fit
+#' carries no population slot (e.g. a bare frequentist per-plate fit whose only
+#' noise term rides in `calib_param`).
+#'
+#' @inheritParams tidy_samples
+#' @return Data frame `curve_id, term, param_scope, estimate, std_error,
+#'   q_lo, q_med, q_hi`.
+#' @seealso [tidy_draws()], [tidy_fit_diag()]
+#' @export
+tidy_hyperparam <- function(x, ...) UseMethod("tidy_hyperparam")
+
+#' @rdname tidy_hyperparam
+#' @export
+tidy_hyperparam.calibration_result <- function(x, ...) {
+  df <- .pop_params_df(x$population)
+  if (is.null(df)) return(data.frame())
+  df$curve_id    <- as.character(x$meta$curve_id %||% NA_character_)
+  df$param_scope <- "population"
+  df[c("curve_id", "term", "param_scope",
+       "estimate", "std_error", "q_lo", "q_med", "q_hi")]
+}
+
+#' @rdname tidy_hyperparam
+#' @export
+tidy_hyperparam.calibration_result_multiplate <- function(x, ...) {
+  cids <- names(x$plates)
+  # Pooled arm: one group-level $population -> fan across every curve_id.
+  grp <- .pop_params_df(x$population)
+  if (!is.null(grp)) {
+    parts <- lapply(cids, function(cid) {
+      d <- grp; d$curve_id <- as.character(cid); d$param_scope <- "population"; d
+    })
+    out <- do.call(.cr_rbind_fill, parts)
+    return(out[c("curve_id", "term", "param_scope",
+                 "estimate", "std_error", "q_lo", "q_med", "q_hi")])
+  }
+  # Per-plate arms: collect each plate's own $population.
+  parts <- lapply(cids, function(cid) {
+    cr <- x$plates[[cid]]
+    if (is.null(cr)) return(NULL)
+    d <- tidy_hyperparam(cr)
+    if (nrow(d) == 0L) return(NULL)
+    d
+  })
+  parts <- Filter(Negate(is.null), parts)
+  if (length(parts) == 0L) return(data.frame())
+  do.call(.cr_rbind_fill, parts)
+}
+
+
+#' Tidy the posterior / sampling draws from a calibration result
+#'
+#' Extracts per-parameter draw vectors (posterior draws for Bayesian fits;
+#' asymptotic-MVN or bootstrap samples for frequentist) into a tidy frame with
+#' one row per `(curve_id, term)` and a list-column `draws` holding the vector,
+#' plus `n_draws` and `sample_kind`. Feeds the `calib_draws` table (the worker
+#' packs `draws` into a `float8[]` column). Present only when the fit was run
+#' with `persist_draws = TRUE`; otherwise returns a zero-row frame.
+#'
+#' Draw order is preserved and shared across terms within a fit, so consumers
+#' may column-bind the vectors into a joint posterior (e.g. the JOB-3
+#' correlation matrix).
+#'
+#' @inheritParams tidy_samples
+#' @return Data frame `curve_id, term, param_scope, sample_kind, n_draws, draws`
+#'   (`draws` is a list-column of numeric vectors).
+#' @seealso [tidy_hyperparam()]
+#' @export
+tidy_draws <- function(x, ...) UseMethod("tidy_draws")
+
+# Build the per-(term) draw rows for one result, given a named list of draw
+# vectors, a curve_id, a scope label, and a sample_kind.
+.draw_rows <- function(draw_list, curve_id, param_scope, sample_kind) {
+  if (is.null(draw_list) || length(draw_list) == 0L) return(NULL)
+  terms <- names(draw_list)
+  data.frame(
+    curve_id    = as.character(curve_id),
+    term        = terms,
+    param_scope = param_scope,
+    sample_kind = sample_kind,
+    n_draws     = vapply(draw_list, length, integer(1)),
+    draws       = I(unname(draw_list)),   # list-column
+    row.names   = NULL, stringsAsFactors = FALSE
+  )
+}
+
+#' @rdname tidy_draws
+#' @export
+tidy_draws.calibration_result <- function(x, ...) {
+  cid  <- x$meta$curve_id %||% NA_character_
+  kind <- if (identical(x$meta$method, "frequentist")) "mvn" else "posterior"
+  rows <- list()
+  # per-curve model params: from the best model's $draws (if present)
+  best <- x$selection$best_model_name %||% NA_character_
+  ens  <- if (!is.na(best)) x$ensemble[[best]] else NULL
+  if (!is.null(ens) && !is.null(ens$draws))
+    rows[[length(rows) + 1L]] <- .draw_rows(ens$draws, cid, "curve", kind)
+  # population/noise draws
+  if (!is.null(x$population) && !is.null(x$population$draws))
+    rows[[length(rows) + 1L]] <- .draw_rows(x$population$draws, cid, "population", kind)
+  rows <- Filter(Negate(is.null), rows)
+  if (length(rows) == 0L) return(data.frame())
+  do.call(rbind, rows)
+}
+
+#' @rdname tidy_draws
+#' @export
+tidy_draws.calibration_result_multiplate <- function(x, ...) {
+  cids <- names(x$plates)
+  parts <- list()
+  # pooled group draws -> fan across curve_ids
+  if (!is.null(x$population) && !is.null(x$population$draws)) {
+    kind <- if (identical(x$meta$method, "frequentist")) "mvn" else "posterior"
+    for (cid in cids)
+      parts[[length(parts) + 1L]] <- .draw_rows(x$population$draws, cid, "population", kind)
+  }
+  # per-plate draws (curve params, and per-plate population for per-plate arms)
+  for (cid in cids) {
+    cr <- x$plates[[cid]]
+    if (is.null(cr)) next
+    d <- tidy_draws(cr)
+    if (nrow(d) > 0L) parts[[length(parts) + 1L]] <- d
+  }
+  parts <- Filter(function(d) !is.null(d) && nrow(d) > 0L, parts)
+  if (length(parts) == 0L) return(data.frame())
+  do.call(rbind, parts)
+}
+
+
+#' Tidy the per-fit diagnostics from a calibration result
+#'
+#' Extracts sampler/optimizer diagnostics into a tidy frame keyed by
+#' `curve_id`. Bayesian columns (`rhat_max`, `ess_bulk_min`, `ess_tail_min`,
+#' `n_divergent`, `pct_divergent`, `max_treedepth_hit`, `ebfmi_min`) and
+#' frequentist columns (`hessian_condition_number`, `gradient_norm`,
+#' `optimizer_code`, `rel_tol_achieved`) coexist; the irrelevant set is NA for
+#' a given engine. Common columns: `fit_seconds`, `n_iterations`, `converged`,
+#' `fit_seed`. Feeds `calib_fit_diag`.
+#'
+#' @inheritParams tidy_samples
+#' @return One row per `curve_id`.
+#' @seealso [tidy_hyperparam()]
+#' @export
+tidy_fit_diag <- function(x, ...) UseMethod("tidy_fit_diag")
+
+.fit_diag_cols <- c(
+  "fit_seconds", "n_iterations", "converged", "fit_seed",
+  "rhat_max", "ess_bulk_min", "ess_tail_min", "n_divergent",
+  "pct_divergent", "max_treedepth_hit", "ebfmi_min",
+  "hessian_condition_number", "gradient_norm", "optimizer_code",
+  "rel_tol_achieved")
+
+.fit_diag_row <- function(diag, curve_id) {
+  row <- data.frame(curve_id = as.character(curve_id), stringsAsFactors = FALSE)
+  for (col in .fit_diag_cols)
+    row[[col]] <- if (!is.null(diag) && !is.null(diag[[col]])) diag[[col]] else NA
+  row
+}
+
+#' @rdname tidy_fit_diag
+#' @export
+tidy_fit_diag.calibration_result <- function(x, ...) {
+  # prefer an explicit $population$fit_diag; else the best model's fit_stats
+  diag <- x$population$fit_diag
+  if (is.null(diag)) {
+    best <- x$selection$best_model_name %||% NA_character_
+    ens  <- if (!is.na(best)) x$ensemble[[best]] else NULL
+    diag <- if (!is.null(ens)) ens$fit_stats else NULL
+  }
+  .fit_diag_row(diag, x$meta$curve_id %||% NA_character_)
+}
+
+#' @rdname tidy_fit_diag
+#' @export
+tidy_fit_diag.calibration_result_multiplate <- function(x, ...) {
+  cids <- names(x$plates)
+  grp  <- x$population$fit_diag           # pooled arm: one diag -> fan out
+  parts <- lapply(cids, function(cid) {
+    cr <- x$plates[[cid]]
+    if (is.null(cr)) return(NULL)
+    if (!is.null(grp)) .fit_diag_row(grp, cid) else tidy_fit_diag(cr)
+  })
+  parts <- Filter(Negate(is.null), parts)
+  if (length(parts) == 0L) return(data.frame())
+  do.call(.cr_rbind_fill, parts)
+}

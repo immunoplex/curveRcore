@@ -4,6 +4,7 @@
 <url><loc>https://immunoplex.github.io/curveRcore/articles/index.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/articles/model-forms.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/authors.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/calib_schema_expansion_SPEC.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/CONTRIBUTING.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/index.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/LICENSE.html</loc></url>
@@ -82,8 +83,12 @@
 <url><loc>https://immunoplex.github.io/curveRcore/reference/resolve_response_col.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/safe_unique.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/select_best_eligible.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_draws.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_grid.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_hyperparam.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_samples.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/validate_fixed_lower_asymptote.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/stage1_sanity_STAGE_SUMMARY.html</loc></url>
 </urlset>
 

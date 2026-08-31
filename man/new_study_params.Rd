@@ -8,7 +8,9 @@ new_study_params(
   is_log_response = TRUE,
   is_log_independent = TRUE,
   apply_prozone = TRUE,
-  blank_option = "ignored"
+  blank_option = "ignored",
+  persist_draws = FALSE,
+  bayes_single_plate = FALSE
 )
 }
 \arguments{
@@ -24,6 +26,16 @@ Default TRUE.}
 \item{blank_option}{Character. Blank handling method. One of
 \code{"ignored"}, \code{"included"}, \code{"subtracted"}, \code{"subtracted_3x"},
 \code{"subtracted_10x"}. Default \code{"ignored"}.}
+
+\item{persist_draws}{Logical. If TRUE, the fitting engine persists the
+full posterior (Bayesian) or asymptotic-MVN (frequentist) parameter
+draws to \code{calib_draws}. Heavy output; default FALSE. Gate only — the
+light \code{calib_hyperparam}/\code{calib_fit_diag} tables are always written.}
+
+\item{bayes_single_plate}{Logical. Bayesian only. If TRUE, each plate is
+fit independently (N_plates = 1, no cross-plate pooling) instead of as
+one multiplate hierarchy. Default FALSE (multiplate pooling). The
+frequentist engine is always per-plate and ignores this flag.}
 }
 \value{
 A named list of class \code{study_params}.

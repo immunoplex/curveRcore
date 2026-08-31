@@ -4,13 +4,28 @@
 \alias{new_calibration_result_multiplate}
 \title{Construct a Multi-Plate Calibration Result}
 \usage{
-new_calibration_result_multiplate(meta, plates)
+new_calibration_result_multiplate(meta, plates, population = NULL)
 }
 \arguments{
 \item{meta}{Named list. Multi-plate metadata (must include \code{plates}
 character vector).}
 
 \item{plates}{Named list of \code{calibration_result} objects, one per plate.}
+
+\item{population}{Named list or NULL. Group-level (population/noise)
+parameters of the pooled Bayesian multiplate fit. NULL for per-plate
+fits (single-plate Bayes or frequentist), which carry no pooled level.
+Expected shape (all optional):
+\describe{
+\item{params}{Data frame \verb{term, estimate, std_error, q_lo, q_med, q_hi} — the group scalars (\verb{mu_*}, \verb{sigma_*}, \code{sigma_obs}, \code{nu}, ...).}
+\item{draws}{Named list \code{term -> numeric()} of iteration-ordered
+posterior draws (present only when \code{persist_draws = TRUE}); all
+terms share one draw order so they can be column-bound into a joint
+posterior.}
+\item{fit_diag}{Named list of per-fit sampler diagnostics
+(\code{rhat_max}, \code{ess_bulk_min}, \code{n_divergent}, \code{fit_seconds}, \code{fit_seed},
+...).}
+}}
 }
 \value{
 An object of class \code{calibration_result_multiplate}.

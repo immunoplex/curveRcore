@@ -31,6 +31,12 @@
 #'   or NULL if not provided.
 #' @param blanks Data frame of blank data used for QA,
 #'   or NULL if not provided.
+#' @param population Named list or NULL. Per-plate population/noise parameters
+#'   for per-plate arms (single-plate Bayes: this plate's `sigma_obs`/`nu` and
+#'   hyperprior-informed `mu_*`; frequentist: `sigma_resid`). Same shape as the
+#'   multiplate `population` slot (see [new_calibration_result_multiplate()]).
+#'   NULL for the pooled multiplate arm, where group params live on the
+#'   multiplate container instead.
 #'
 #' @return An object of class `calibration_result`.
 #'
@@ -42,7 +48,8 @@ new_calibration_result <- function(meta,
                                    samples    = NULL,
                                    diagnostics = NULL,
                                    standards = NULL,
-                                   blanks = NULL) {
+                                   blanks = NULL,
+                                   population = NULL) {
 
   # Validate required meta fields
   required_meta <- c("method", "package", "curve_id",
@@ -69,7 +76,8 @@ new_calibration_result <- function(meta,
     samples     = samples,
     diagnostics = diagnostics,
     standards = standards,
-    blanks = blanks
+    blanks = blanks,
+    population = population
   )
   class(out) <- c("calibration_result", "list")
   out
@@ -158,14 +166,30 @@ summary.calibration_result <- function(object, ...) {
 #' @param meta Named list. Multi-plate metadata (must include `plates`
 #'   character vector).
 #' @param plates Named list of `calibration_result` objects, one per plate.
+#' @param population Named list or NULL. Group-level (population/noise)
+#'   parameters of the pooled Bayesian multiplate fit. NULL for per-plate
+#'   fits (single-plate Bayes or frequentist), which carry no pooled level.
+#'   Expected shape (all optional):
+#'   \describe{
+#'     \item{params}{Data frame `term, estimate, std_error, q_lo, q_med,
+#'       q_hi` — the group scalars (`mu_*`, `sigma_*`, `sigma_obs`, `nu`, ...).}
+#'     \item{draws}{Named list `term -> numeric()` of iteration-ordered
+#'       posterior draws (present only when `persist_draws = TRUE`); all
+#'       terms share one draw order so they can be column-bound into a joint
+#'       posterior.}
+#'     \item{fit_diag}{Named list of per-fit sampler diagnostics
+#'       (`rhat_max`, `ess_bulk_min`, `n_divergent`, `fit_seconds`, `fit_seed`,
+#'       ...).}
+#'   }
 #'
 #' @return An object of class `calibration_result_multiplate`.
 #'
 #' @export
-new_calibration_result_multiplate <- function(meta, plates) {
+new_calibration_result_multiplate <- function(meta, plates, population = NULL) {
   stopifnot(is.list(plates))
+  if (!is.null(population)) stopifnot(is.list(population))
 
-  out <- list(meta = meta, plates = plates)
+  out <- list(meta = meta, plates = plates, population = population)
   class(out) <- c("calibration_result_multiplate", "list")
   out
 }

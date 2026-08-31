@@ -12,7 +12,8 @@ new_calibration_result(
   samples = NULL,
   diagnostics = NULL,
   standards = NULL,
-  blanks = NULL
+  blanks = NULL,
+  population = NULL
 )
 }
 \arguments{
@@ -41,6 +42,13 @@ or NULL if not provided.}
 
 \item{blanks}{Data frame of blank data used for QA,
 or NULL if not provided.}
+
+\item{population}{Named list or NULL. Per-plate population/noise parameters
+for per-plate arms (single-plate Bayes: this plate's \code{sigma_obs}/\code{nu} and
+hyperprior-informed \verb{mu_*}; frequentist: \code{sigma_resid}). Same shape as the
+multiplate \code{population} slot (see \code{\link[=new_calibration_result_multiplate]{new_calibration_result_multiplate()}}).
+NULL for the pooled multiplate arm, where group params live on the
+multiplate container instead.}
 }
 \value{
 An object of class \code{calibration_result}.

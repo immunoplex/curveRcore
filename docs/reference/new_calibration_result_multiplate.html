@@ -9,7 +9,7 @@ multi-plate container."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.3.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -46,7 +46,7 @@ multi-plate container.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">new_calibration_result_multiplate</span><span class="op">(</span><span class="va">meta</span>, <span class="va">plates</span><span class="op">)</span></span></code></pre></div>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">new_calibration_result_multiplate</span><span class="op">(</span><span class="va">meta</span>, <span class="va">plates</span>, population <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
     </div>
 
     <div class="section level2">
@@ -60,6 +60,28 @@ character vector).</p></dd>
 
 <dt id="arg-plates">plates<a class="anchor" aria-label="anchor" href="#arg-plates"></a></dt>
 <dd><p>Named list of <code>calibration_result</code> objects, one per plate.</p></dd>
+
+
+<dt id="arg-population">population<a class="anchor" aria-label="anchor" href="#arg-population"></a></dt>
+<dd><p>Named list or NULL. Group-level (population/noise)
+parameters of the pooled Bayesian multiplate fit. NULL for per-plate
+fits (single-plate Bayes or frequentist), which carry no pooled level.
+Expected shape (all optional):</p><dl><dt>params</dt>
+<dd><p>Data frame <code>term, estimate, std_error, q_lo, q_med, q_hi</code> — the group scalars (<code>mu_*</code>, <code>sigma_*</code>, <code>sigma_obs</code>, <code>nu</code>, ...).</p></dd>
+
+<dt>draws</dt>
+<dd><p>Named list <code>term -&gt; numeric()</code> of iteration-ordered
+posterior draws (present only when <code>persist_draws = TRUE</code>); all
+terms share one draw order so they can be column-bound into a joint
+posterior.</p></dd>
+
+<dt>fit_diag</dt>
+<dd><p>Named list of per-fit sampler diagnostics
+(<code>rhat_max</code>, <code>ess_bulk_min</code>, <code>n_divergent</code>, <code>fit_seconds</code>, <code>fit_seed</code>,
+...).</p></dd>
+
+
+</dl></dd>
 
 </dl></div>
     <div class="section level2">

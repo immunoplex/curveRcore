@@ -374,6 +374,12 @@ Broom-style helpers for extracting tabular data.
   : Tidy the precision grid from a calibration result
 - [`tidy_samples()`](https://immunoplex.github.io/curveRcore/reference/tidy_samples.md)
   : Tidy the per-sample predictions from a calibration result
+- [`tidy_hyperparam()`](https://immunoplex.github.io/curveRcore/reference/tidy_hyperparam.md)
+  : Tidy the population / noise parameters from a calibration result
+- [`tidy_draws()`](https://immunoplex.github.io/curveRcore/reference/tidy_draws.md)
+  : Tidy the posterior / sampling draws from a calibration result
+- [`tidy_fit_diag()`](https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.md)
+  : Tidy the per-fit diagnostics from a calibration result
 
 ## Eligibility & Selection
 
