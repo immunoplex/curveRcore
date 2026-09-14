@@ -33,7 +33,7 @@ new_antigen_constraints <- function(antigen,
                                     l_asy_max = 0,
                                     l_asy_method = "default",
                                     std_curve_conc = 10000,
-                                    pcov_threshold = 15,
+                                    pcov_threshold = 20,
                                     std_error_blank = NULL) {
 
   valid_methods <- c("default", "user_defined", "range_of_blanks",

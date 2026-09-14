@@ -1,6 +1,6 @@
 {
     "dialog-state": {
-        "query": "inflect",
+        "query": "new_antigen_constraints",
         "path": "",
         "regex": false,
         "caseSensitive": false,
@@ -9,7 +9,7 @@
         "useGitGrep": true,
         "excludeGitIgnore": true,
         "excludeFilePatterns": [],
-        "resultsCount": 204,
+        "resultsCount": 33,
         "errorCount": 0,
         "replaceErrors": "",
         "projectRelative": true
