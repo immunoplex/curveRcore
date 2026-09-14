@@ -1,3 +1,8 @@
+# curveRcore 0.4.1
+
+* new_antigen_constraints() default pcov_threshold is now 20 (was 15), matching the fitting-engine default and removing the mismatch that let sample-level pcov_pass diverge from the grid/LOQ threshold.
+
+
 # curveRcore 0.4.0 (2026-07-29)
 
 * **Fixed the inflection-point calculation.** `inflect_x` no longer snaps to the
