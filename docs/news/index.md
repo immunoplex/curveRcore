@@ -1,5 +1,10 @@
 # Changelog
 
+## curveRcore 0.4.2
+
+- Created a new pcov_gate_class and changed the basis for pcov_pass
+  classifcations.
+
 ## curveRcore 0.4.1
 
 - new_antigen_constraints() default pcov_threshold is now 20 (was 15),

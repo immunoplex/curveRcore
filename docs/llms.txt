@@ -398,6 +398,12 @@ LOD, MDC, RDL, and shape-LOQ functions.
   : Compute and attach detection limits to a calibration_result
 - [`compute_detection_limits_multiplate()`](https://immunoplex.github.io/curveRcore/reference/compute_detection_limits_multiplate.md)
   : Compute detection limits for all plates in a multiplate result
+- [`classify_pcov_gate()`](https://immunoplex.github.io/curveRcore/reference/classify_pcov_gate.md)
+  : Classify pcov gate membership for a set of points on one curve
+- [`classify_pcov_gates_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_pcov_gates_multiplate.md)
+  : Reclassify pcov_pass (grid + samples) and add pcov_gate_class
+  (samples), for every curve in a fitted result, using each curve's own
+  LLOQ/ULOQ
 - [`compute_shape_loq_from_grid()`](https://immunoplex.github.io/curveRcore/reference/compute_shape_loq_from_grid.md)
   : Compute curvature-based (shape) LOQs from an enriched grid
 - [`enrich_grid_with_d2y()`](https://immunoplex.github.io/curveRcore/reference/enrich_grid_with_d2y.md)

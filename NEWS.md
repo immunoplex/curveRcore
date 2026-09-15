@@ -1,3 +1,8 @@
+# curveRcore 0.4.2
+
+* Created a new pcov_gate_class and changed the basis for pcov_pass classifcations.
+
+
 # curveRcore 0.4.1
 
 * new_antigen_constraints() default pcov_threshold is now 20 (was 15), matching the fitting-engine default and removing the mismatch that let sample-level pcov_pass diverge from the grid/LOQ threshold.

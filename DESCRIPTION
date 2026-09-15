@@ -1,6 +1,6 @@
 Package: curveRcore
 Title: Shared Model Mathematics for Immunoassay Calibration Curves
-Version: 0.4.1
+Version: 0.4.2
 Authors@R: c( person("Michael Scot", "Zens", email =
         "michael.s.zens@dartmouth.edu", role = c("aut", "cre")),
         person("Seamus O.", "Stein", email = "seamusstein@gmail.com",
