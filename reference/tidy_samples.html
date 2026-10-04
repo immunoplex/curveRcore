@@ -85,6 +85,24 @@ carried-through original sample columns plus <code>predicted_concentration</code
 no samples are present.</p>
     </div>
     <div class="section level2">
+    <h2 id="passthrough-contract-for-study-design-columns">Passthrough contract for study-design columns<a class="anchor" aria-label="anchor" href="#passthrough-contract-for-study-design-columns"></a></h2>
+
+
+<p>Any column present on the <code>samples</code> data frame supplied to the fitting call
+(<code>curveRfreq::fit_calibration_freq()</code>/<code>_multiplate()</code>,
+<code>curveRbayes::fit_calibration_bayes()</code>) survives into <code>$samples</code> verbatim –
+neither <code><a href="new_calibration_result.html">new_calibration_result()</a></code>/<code><a href="new_calibration_result_multiplate.html">new_calibration_result_multiplate()</a></code> nor
+the fitters' sample-prediction step filter or whitelist columns; they only
+ever <em>add</em> columns (<code>predicted_concentration</code>, <code>se_concentration</code>, <code>pcov</code>,
+...) to the frame they were given. This is the supported mechanism for
+threading study-design metadata (e.g. <code>timeperiod</code>, <code>agroup</code>/cohort arm)
+through to downstream consumers, most notably
+<code>curveRweights::as_weight_data(design = c("timeperiod", "agroup"))</code>'s
+saturated cell-means grouping. No curveRcore/curveRfreq/curveRbayes code
+change is needed to add a new design column – just ensure it is present on
+<code>samples</code> before fitting.</p>
+    </div>
+    <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="tidy_grid.html">tidy_grid()</a></code>, <code><a href="pcov_se_conversion.html">pcov_from_se()</a></code></p></div>
     </div>
