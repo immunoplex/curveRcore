@@ -1,3 +1,17 @@
+# curveRcore 0.4.4
+
+## Documented the study-design-column passthrough contract on `tidy_samples()`
+
+* Any column present on the `samples` frame handed to `fit_calibration_freq()`/
+  `_multiplate()` or `fit_calibration_bayes()` survives verbatim into
+  `$samples` -- neither `new_calibration_result()`/`_multiplate()` nor the
+  fitters' sample-prediction step ever filter columns, they only add to the
+  frame they were given. This is now an explicit, documented contract (a new
+  `@section` on `tidy_samples()`) rather than an implicit side effect, since it
+  is the supported mechanism for threading study-design metadata (e.g.
+  `timeperiod`, `agroup`) through to `curveRweights::as_weight_data(design =
+  ...)`. No code change -- documentation only.
+
 # curveRcore 0.4.3
 
 ## Bug fix: multiplate tidy accessors mis-used `do.call()` for row-binding
