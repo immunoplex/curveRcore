@@ -1,5 +1,35 @@
 # Changelog
 
+## curveRcore 0.4.3
+
+### Bug fix: multiplate tidy accessors mis-used `do.call()` for row-binding
+
+- [`tidy_samples()`](https://immunoplex.github.io/curveRcore/reference/tidy_samples.md),
+  [`tidy_grid()`](https://immunoplex.github.io/curveRcore/reference/tidy_grid.md),
+  [`tidy_hyperparam()`](https://immunoplex.github.io/curveRcore/reference/tidy_hyperparam.md),
+  and
+  [`tidy_fit_diag()`](https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.md)
+  on a `calibration_result_multiplate` all row-bound plates with
+  `do.call(.cr_rbind_fill, parts)`. `.cr_rbind_fill()` takes a single
+  `dfs` (list of data frames) argument, so
+  [`do.call()`](https://rdrr.io/r/base/do.call.html) — which spreads
+  `parts` as *separate* positional arguments — raised
+  `"unused arguments"` for any multiplate result with 2+ non-NULL
+  plates, and silently misbehaved (the lone data frame’s *columns* were
+  iterated instead of a one-element list) for exactly one plate.
+- Fixed all five call sites to call `.cr_rbind_fill(parts)` directly.
+  Added `tests/testthat/test-tidy_extractors.R`, covering both the
+  1-plate and 2+-plate cases for every affected accessor.
+- No other curveRcore function routes through `.cr_rbind_fill()` or
+  these accessors
+  ([`compute_detection_limits_multiplate()`](https://immunoplex.github.io/curveRcore/reference/compute_detection_limits_multiplate.md)
+  and
+  [`classify_pcov_gates_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_pcov_gates_multiplate.md)
+  loop over `$plates` directly), so this only affects callers of
+  [`tidy_samples()`](https://immunoplex.github.io/curveRcore/reference/tidy_samples.md)/[`tidy_grid()`](https://immunoplex.github.io/curveRcore/reference/tidy_grid.md)/[`tidy_hyperparam()`](https://immunoplex.github.io/curveRcore/reference/tidy_hyperparam.md)/
+  [`tidy_fit_diag()`](https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.md)
+  themselves — notably curveRweights’ `as_weight_data()`.
+
 ## curveRcore 0.4.2
 
 - Created a new pcov_gate_class and changed the basis for pcov_pass
