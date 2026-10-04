@@ -81,7 +81,7 @@ tidy_samples.calibration_result_multiplate <- function(x, ...) {
   })
   parts <- Filter(Negate(is.null), parts)
   if (length(parts) == 0L) return(data.frame())
-  do.call(.cr_rbind_fill, parts)
+  .cr_rbind_fill(parts)
 }
 
 
@@ -127,7 +127,7 @@ tidy_grid.calibration_result_multiplate <- function(x, model = NULL, ...) {
   })
   parts <- Filter(Negate(is.null), parts)
   if (length(parts) == 0L) return(data.frame())
-  do.call(.cr_rbind_fill, parts)
+  .cr_rbind_fill(parts)
 }
 
 
@@ -210,7 +210,7 @@ tidy_hyperparam.calibration_result_multiplate <- function(x, ...) {
     parts <- lapply(cids, function(cid) {
       d <- grp; d$curve_id <- as.character(cid); d$param_scope <- "population"; d
     })
-    out <- do.call(.cr_rbind_fill, parts)
+    out <- .cr_rbind_fill(parts)
     return(out[c("curve_id", "term", "param_scope",
                  "estimate", "std_error", "q_lo", "q_med", "q_hi")])
   }
@@ -224,7 +224,7 @@ tidy_hyperparam.calibration_result_multiplate <- function(x, ...) {
   })
   parts <- Filter(Negate(is.null), parts)
   if (length(parts) == 0L) return(data.frame())
-  do.call(.cr_rbind_fill, parts)
+  .cr_rbind_fill(parts)
 }
 
 
@@ -362,5 +362,5 @@ tidy_fit_diag.calibration_result_multiplate <- function(x, ...) {
   })
   parts <- Filter(Negate(is.null), parts)
   if (length(parts) == 0L) return(data.frame())
-  do.call(.cr_rbind_fill, parts)
+  .cr_rbind_fill(parts)
 }

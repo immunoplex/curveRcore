@@ -1,3 +1,24 @@
+# curveRcore 0.4.3
+
+## Bug fix: multiplate tidy accessors mis-used `do.call()` for row-binding
+
+* `tidy_samples()`, `tidy_grid()`, `tidy_hyperparam()`, and `tidy_fit_diag()`
+  on a `calibration_result_multiplate` all row-bound plates with
+  `do.call(.cr_rbind_fill, parts)`. `.cr_rbind_fill()` takes a single `dfs`
+  (list of data frames) argument, so `do.call()` — which spreads `parts` as
+  *separate* positional arguments — raised `"unused arguments"` for any
+  multiplate result with 2+ non-NULL plates, and silently misbehaved (the
+  lone data frame's *columns* were iterated instead of a one-element list)
+  for exactly one plate.
+* Fixed all five call sites to call `.cr_rbind_fill(parts)` directly. Added
+  `tests/testthat/test-tidy_extractors.R`, covering both the 1-plate and
+  2+-plate cases for every affected accessor.
+* No other curveRcore function routes through `.cr_rbind_fill()` or these
+  accessors (`compute_detection_limits_multiplate()` and
+  `classify_pcov_gates_multiplate()` loop over `$plates` directly), so this
+  only affects callers of `tidy_samples()`/`tidy_grid()`/`tidy_hyperparam()`/
+  `tidy_fit_diag()` themselves — notably curveRweights' `as_weight_data()`.
+
 # curveRcore 0.4.2
 
 * Created a new pcov_gate_class and changed the basis for pcov_pass classifcations.
