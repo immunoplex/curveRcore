@@ -47,6 +47,21 @@ se_from_pcov <- function(pcov) {
 #' downstream packages (e.g. curveRweights) to read sample-level concentration
 #' and precision; they must not reach into the object internals directly.
 #'
+#' @section Passthrough contract for study-design columns:
+#' Any column present on the `samples` data frame supplied to the fitting call
+#' (`curveRfreq::fit_calibration_freq()`/`_multiplate()`,
+#' `curveRbayes::fit_calibration_bayes()`) survives into `$samples` verbatim --
+#' neither `new_calibration_result()`/`new_calibration_result_multiplate()` nor
+#' the fitters' sample-prediction step filter or whitelist columns; they only
+#' ever *add* columns (`predicted_concentration`, `se_concentration`, `pcov`,
+#' ...) to the frame they were given. This is the supported mechanism for
+#' threading study-design metadata (e.g. `timeperiod`, `agroup`/cohort arm)
+#' through to downstream consumers, most notably
+#' `curveRweights::as_weight_data(design = c("timeperiod", "agroup"))`'s
+#' saturated cell-means grouping. No curveRcore/curveRfreq/curveRbayes code
+#' change is needed to add a new design column -- just ensure it is present on
+#' `samples` before fitting.
+#'
 #' @param x A `calibration_result` or `calibration_result_multiplate`.
 #' @param ... Unused; for method extensibility.
 #' @return A data frame of the per-sample predictions. For multiplate input the

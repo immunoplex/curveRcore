@@ -31,6 +31,23 @@ Extracts the \verb{$samples} table from a \code{calibration_result} or
 downstream packages (e.g. curveRweights) to read sample-level concentration
 and precision; they must not reach into the object internals directly.
 }
+\section{Passthrough contract for study-design columns}{
+
+Any column present on the \code{samples} data frame supplied to the fitting call
+(\code{curveRfreq::fit_calibration_freq()}/\verb{_multiplate()},
+\code{curveRbayes::fit_calibration_bayes()}) survives into \verb{$samples} verbatim --
+neither \code{new_calibration_result()}/\code{new_calibration_result_multiplate()} nor
+the fitters' sample-prediction step filter or whitelist columns; they only
+ever \emph{add} columns (\code{predicted_concentration}, \code{se_concentration}, \code{pcov},
+...) to the frame they were given. This is the supported mechanism for
+threading study-design metadata (e.g. \code{timeperiod}, \code{agroup}/cohort arm)
+through to downstream consumers, most notably
+\code{curveRweights::as_weight_data(design = c("timeperiod", "agroup"))}'s
+saturated cell-means grouping. No curveRcore/curveRfreq/curveRbayes code
+change is needed to add a new design column -- just ensure it is present on
+\code{samples} before fitting.
+}
+
 \seealso{
 \code{\link[=tidy_grid]{tidy_grid()}}, \code{\link[=pcov_from_se]{pcov_from_se()}}
 }
