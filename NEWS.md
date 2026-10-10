@@ -1,3 +1,16 @@
+# curveRcore 0.4.5
+
+## Fixed analytic inverse-curve gradients (delta-method SEs)
+
+* `grad_logistic5()` and `grad_gompertz4()`: dx/da was set equal to (minus) dx/dy, missing the (d - a) dependence of the
+  inverse; `grad_logistic5()` also returned dx/dy with the wrong sign.
+* `grad_loglogistic5()`: dx/da, dx/dd and dx/dg corrected; `grad_loglogistic4()` and `grad_inv_loglogistic4_fixed()`:
+  dx/dd sign corrected; `grad_inv_loglogistic5_fixed()`: sign of the 1/g term of dx/dg corrected.
+* These feed the delta-method sample SEs in curveRfreq; NLS 5PL, Gompertz and log-logistic SEs (and CV-based
+  reportability, coverage and any precision-profile gate) computed with earlier versions are affected. 4PL is unaffected.
+* New tests check every analytic gradient, including `grad_y_*_fixed()`, against finite differences of the inverse
+  functions at several parameter sets (including g > 1).
+
 # curveRcore 0.4.4
 
 ## Documented the study-design-column passthrough contract on `tidy_samples()`

@@ -33,3 +33,18 @@ test_that("fixed-a gradients match finite differences", {
   check_grad(grad_inv_loglogistic4_fixed, inv_loglogistic4_fixed, list(fixed_a = 1, b = 1.5, c = 100, d = 4.2), ys, TRUE)
   check_grad(grad_inv_loglogistic5_fixed, inv_loglogistic5_fixed, list(fixed_a = 1, b = 1.5, c = 2, d = 4.2, g = 0.6), ys, TRUE)
 })
+
+test_that("grad_y fixed-a variants match finite differences", {
+  for (y in ys) {
+    expect_equal(grad_y_logistic4_fixed(y, 1, 0.6, 4.2),       num_grad(inv_logistic4_fixed,    list(y = y, fixed_a = 1, b = 0.6, c = 2, d = 4.2), "y"), tolerance = 1e-5)
+    expect_equal(grad_y_logistic5_fixed(y, 1, 0.6, 4.2, 0.4),  num_grad(inv_logistic5_fixed,    list(y = y, fixed_a = 1, b = 0.6, c = 2, d = 4.2, g = 0.4), "y"), tolerance = 1e-5)
+    expect_equal(grad_y_gompertz4_fixed(y, 1, 0.6, 4.2),       num_grad(inv_gompertz4_fixed,    list(y = y, fixed_a = 1, b = 0.6, c = 2, d = 4.2), "y"), tolerance = 1e-5)
+  }
+})
+test_that("gradients hold at other parameter sets, including g > 1", {
+  for (g in c(0.3, 1.7, 3.5)) {
+    check_grad(grad_logistic5,    inv_logistic5,    list(a = 0.5, b = 0.9, c = 1.5, d = 3.9, g = g), c(1.0, 2.2, 3.5))
+    check_grad(grad_loglogistic5, inv_loglogistic5, list(a = 0.5, b = 1.2, c = 1.5, d = 3.9, g = g), c(1.0, 2.2, 3.5))
+  }
+  check_grad(grad_gompertz4, inv_gompertz4, list(a = 0.2, b = 1.4, c = 0.8, d = 3.1), c(0.6, 1.6, 2.9))
+})
