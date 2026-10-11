@@ -89,6 +89,10 @@ reference:
   - compute_detection_limits_multiplate
   - classify_pcov_gate
   - classify_pcov_gates_multiplate
+  - classify_censoring
+  - classify_censoring_multiplate
+  - summarize_conc_draws
+  - invert_with_bounds
   - compute_shape_loq_from_grid
   - enrich_grid_with_d2y
   - compute_inflection

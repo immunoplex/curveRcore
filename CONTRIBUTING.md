@@ -23,7 +23,7 @@ Org: `immunoplex`. Hub site: <https://immunoplex.github.io/curveR>.
 Four packages that share one data contract:
 
 | Package | Role | Stan? |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | `curveRcore` | Preprocessing, forward models, inverses, gradients, eligibility gating, **the S3 classes** `calibration_result` / `calibration_result_multiplate`, and shared extractors/helpers | No |
 | `curveRfreq` | Frequentist multi-start LM NLS fitting; returns the core classes | No |
 | `curveRbayes` | Bayesian hierarchical fitting via Stan; returns the **same** core classes | Yes (Suggests) |
@@ -63,7 +63,13 @@ calibration_result
 `log10_concentration | concentration | x_fit | predicted_response | ci_lower | ci_upper | predicted_concentration | se_concentration | pcov | pcov_rmse | pcov_pass | d2y_dx2`
 
 **`$samples` columns**:
-`[original sample columns carried through] | raw_assay_response | observed_response_fit | predicted_log10_concentration | predicted_concentration | final_concentration | se_concentration | pcov | pcov_rmse | pcov_pass`
+`[original sample columns carried through] | raw_assay_response | observed_response_fit | predicted_log10_concentration | predicted_concentration | final_concentration | se_concentration | pcov | pcov_rmse | pcov_pass | conc_q_lo | conc_q_med | conc_q_hi | p_below_lloq | p_above_uloq | p_below_cutoff | frac_draws_below_a | frac_draws_above_d`
+(Bayesian engine also: `noise_mode`.) Added after fitting by the worker
+pipeline: `pcov_gate_class` (`classify_pcov_gates_multiplate()`) and
+`censor_class | censor_type | censor_lower | censor_upper`
+(`classify_censoring_multiplate()`). Both engines emit the interval /
+probability columns via the shared `summarize_conc_draws()` and always
+emit all of them (`NA` when not applicable) so plates row-bind.
 
 Two contract facts contributors break most often:
 
