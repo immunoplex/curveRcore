@@ -105,6 +105,14 @@ LOD, MDC, RDL, and shape-LOQ functions.
   : Reclassify pcov_pass (grid + samples) and add pcov_gate_class
   (samples), for every curve in a fitted result, using each curve's own
   LLOQ/ULOQ
+- [`classify_censoring()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring.md)
+  : Classify censoring for one curve's test samples
+- [`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md)
+  : Add censoring columns to every curve's test samples
+- [`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md)
+  : Summarise predictive concentration draws for test samples
+- [`invert_with_bounds()`](https://immunoplex.github.io/curveRcore/reference/invert_with_bounds.md)
+  : Invert a response with out-of-range responses kept as censored draws
 - [`compute_shape_loq_from_grid()`](https://immunoplex.github.io/curveRcore/reference/compute_shape_loq_from_grid.md)
   : Compute curvature-based (shape) LOQs from an enriched grid
 - [`enrich_grid_with_d2y()`](https://immunoplex.github.io/curveRcore/reference/enrich_grid_with_d2y.md)

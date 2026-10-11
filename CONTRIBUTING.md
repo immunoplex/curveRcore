@@ -71,6 +71,21 @@ pipeline: `pcov_gate_class` (`classify_pcov_gates_multiplate()`) and
 probability columns via the shared `summarize_conc_draws()` and always
 emit all of them (`NA` when not applicable) so plates row-bind.
 
+**Parameter draws** (`$ensemble[[best]]$draws`, persisted to `calib_draws`):
+a named list `term -> numeric()`, term names **identical to the
+`$parameters$term` values** of that model (`a, b, c, d[, g]` — never
+positional names like `p1`), every vector the same length and
+index-aligned (draw *s* of each term together is one curve). A parameter
+held fixed in the fit (a fixed lower asymptote) is not drawn; it goes in
+`$ensemble[[best]]$draws_fixed` as a one-element vector. Bayesian draws are
+posterior draws, emitted under `persist_draws`. Frequentist draws are the
+asymptotic-MVN draws, emitted **by default**: they are the same draws behind
+the samples' predictive intervals, so together with the `sigma_resid`
+parameter and `$meta$interval_seed` they reproduce those intervals exactly.
+Any engine change to draw generation must keep that reproducibility and the
+naming contract (the worker's `verify_saved()` fails a run whose stored draw
+terms do not match `calib_param`).
+
 Two contract facts contributors break most often:
 
 -   **`pcov` is a capped percent %CV; `se_concentration` is the uncapped

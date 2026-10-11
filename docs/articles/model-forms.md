@@ -981,7 +981,7 @@ Richards, F. J. 1959. “A Flexible Growth Function for Empirical Use.”
 sessionInfo()
 #> R version 4.5.2 (2025-10-31 ucrt)
 #> Platform: x86_64-w64-mingw32/x64
-#> Running under: Windows 11 x64 (build 26100)
+#> Running under: Windows 11 x64 (build 26200)
 #> 
 #> Matrix products: default
 #>   LAPACK version 3.12.1
@@ -1000,7 +1000,7 @@ sessionInfo()
 #> [1] stats     graphics  grDevices utils     datasets  methods   base     
 #> 
 #> other attached packages:
-#> [1] curveRcore_0.4.4
+#> [1] curveRcore_0.5.0
 #> 
 #> loaded via a namespace (and not attached):
 #>  [1] digest_0.6.39     desc_1.4.3        R6_2.6.1          fastmap_1.2.0    
