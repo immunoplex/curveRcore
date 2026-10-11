@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,19 @@
       <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.5.0" id="curvercore-050">curveRcore 0.5.0<a class="anchor" aria-label="anchor" href="#curvercore-050"></a></h2>
+<div class="section level3">
+<h3 id="out-of-range-test-samples-censoring-asymmetric-intervals-threshold-probabilities-0-5-0">Out-of-range test samples: censoring, asymmetric intervals, threshold probabilities<a class="anchor" aria-label="anchor" href="#out-of-range-test-samples-censoring-asymmetric-intervals-threshold-probabilities-0-5-0"></a></h3>
+<ul><li>New <code><a href="../reference/classify_censoring.html">classify_censoring()</a></code> / <code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code>: give every back-calculated sample a <code>censor_class</code> (<code>quantified</code>, <code>lod_to_lloq</code>, <code>below_lod</code>, <code>below_lloq</code>, <code>above_uloq</code>, <code>saturated</code>, <code>no_response</code>), a <code>censor_type</code> (<code>none</code>/<code>left</code>/<code>interval</code>/<code>right</code>) and natural-scale, dilution-corrected <code>censor_lower</code>/<code>censor_upper</code> bounds. Run after <code><a href="../reference/classify_pcov_gates_multiplate.html">classify_pcov_gates_multiplate()</a></code>. Classification uses the response scale first, so samples whose point estimate could not be inverted (response beyond an asymptote) are now placed on the correct side instead of <code>NA</code>.</li>
+<li>New <code><a href="../reference/summarize_conc_draws.html">summarize_conc_draws()</a></code>: the shared per-sample summary both engines use for <code>conc_q_lo</code>/<code>conc_q_med</code>/<code>conc_q_hi</code> (2.5/50/97.5% predictive quantiles, natural scale, dilution-corrected), <code>p_below_lloq</code>, <code>p_above_uloq</code>, <code>p_below_cutoff</code> and <code>frac_draws_below_a</code>/<code>_above_d</code>.</li>
+<li>New <code><a href="../reference/invert_with_bounds.html">invert_with_bounds()</a></code> (internal-use export): keeps draws beyond an asymptote as <code>-Inf</code>/<code>+Inf</code> (censored) instead of dropping them.</li>
+<li>
+<code>se_concentration</code> and <code>pcov</code> are unchanged (frozen, §3.3). The new <code>frac_draws_*</code> columns report how many draws the legacy summaries drop.</li>
+<li>
+<code>test-pcov_gates.R</code> is now a real testthat suite (it previously ran as an empty test).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.4.4" id="curvercore-044">curveRcore 0.4.4<a class="anchor" aria-label="anchor" href="#curvercore-044"></a></h2>
 <div class="section level3">

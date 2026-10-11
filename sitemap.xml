@@ -16,6 +16,8 @@
 <url><loc>https://immunoplex.github.io/curveRcore/reference/available_models.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/bead_assay_example.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/build_nls_formulas.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/classify_censoring.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/classify_pcov_gate.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/classify_pcov_gates_multiplate.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/compare_calibrations.html</loc></url>
@@ -65,6 +67,7 @@
 <url><loc>https://immunoplex.github.io/curveRcore/reference/inv_logistic5.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/inv_loglogistic4.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/inv_loglogistic5.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/invert_with_bounds.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/logistic4.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/logistic5.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/loglogistic4.html</loc></url>
@@ -85,6 +88,7 @@
 <url><loc>https://immunoplex.github.io/curveRcore/reference/resolve_response_col.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/safe_unique.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/select_best_eligible.html</loc></url>
+<url><loc>https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_draws.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.html</loc></url>
 <url><loc>https://immunoplex.github.io/curveRcore/reference/tidy_grid.html</loc></url>

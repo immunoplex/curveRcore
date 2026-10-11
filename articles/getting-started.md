@@ -536,10 +536,18 @@ sample replicate:
 | `observed_response_fit` | Response on the fitting scale |
 | `predicted_log10_concentration` | Back-calculated concentration on the log₁₀ scale |
 | `predicted_concentration` | Same as above when `is_log_independent = TRUE` |
-| `final_concentration` | Pre-dilution concentration: `10^predicted_concentration × dilution` |
-| `se_concentration` | Delta-method SD of `predicted_log10_concentration` |
+| `final_concentration` | Dilution-corrected concentration: `10^predicted_log10_concentration × dilution` |
+| `se_concentration` | SD of `predicted_log10_concentration` (delta method, or posterior SD) |
 | `pcov` | Percent CV of the back-calculated concentration, capped at `cv_x_max` |
 | `pcov_pass` | Logical; whether precision meets the acceptance threshold |
+| `conc_q_lo`, `conc_q_med`, `conc_q_hi` | 2.5 / 50 / 97.5 % predictive quantiles of the concentration, natural scale, dilution-corrected |
+| `p_below_lloq`, `p_above_uloq` | Probability the concentration is below the LLOQ / above the ULOQ |
+| `p_below_cutoff` | Probability the dilution-corrected concentration is below `decision_cutoff` (`NA` if none) |
+| `frac_draws_below_a`, `frac_draws_above_d` | Share of draws whose response lay beyond the low / high asymptote |
+
+See [Out-of-range samples](#out-of-range-samples) for how these are
+computed and for the censoring columns added by
+[`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md).
 
 Any additional columns present in the original sample data (dilution,
 replicate number, patient ID, etc.) are carried through unchanged.
@@ -600,6 +608,61 @@ For multiplate results, use the convenience wrapper:
 
 mp <- compute_detection_limits_multiplate(mp)
 ```
+
+------------------------------------------------------------------------
+
+### Out-of-range samples: censoring, intervals and threshold probabilities
+
+`pcov` summarises a sample’s uncertainty as one symmetric number on the
+log₁₀ scale. That cannot distinguish a sample **below** the LLOQ — whose
+true concentration is bounded between 0 and roughly the LLOQ — from one
+**above** the ULOQ, which has no upper bound. Two pieces of output carry
+that missing information.
+
+**Censoring.**
+[`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md)
+(run after
+[`compute_detection_limits_multiplate()`](https://immunoplex.github.io/curveRcore/reference/compute_detection_limits_multiplate.md)
+and
+[`classify_pcov_gates_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_pcov_gates_multiplate.md))
+adds:
+
+| Column | Description |
+|----|----|
+| `censor_class` | `quantified`, `lod_to_lloq`, `below_lod`, `below_lloq` (no LOD available), `above_uloq`, `saturated` (response at/above the upper LOD), `no_response` |
+| `censor_type` | `none`, `left`, `interval`, `right` — the codes censored-data methods expect |
+| `censor_lower`, `censor_upper` | Bounds on the natural, dilution-corrected scale; `NA` = unbounded |
+
+The response scale is checked first, so a sample whose response lies
+beyond an asymptote — and therefore has no finite point estimate — is
+still assigned the right side.
+
+**Predictive draws.** Each engine back-calculates every sample many
+times (Bayesian: once per posterior draw; frequentist: once per Monte
+Carlo draw from the fitted parameter distribution plus residual noise).
+A draw whose response falls beyond that draw’s asymptote is kept as
+censored (`-Inf` / `+Inf` on the log₁₀ scale, via
+[`invert_with_bounds()`](https://immunoplex.github.io/curveRcore/reference/invert_with_bounds.md))
+rather than dropped, and
+[`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md)
+turns the draws into the quantile and probability columns in the table
+above. Because the quantiles are computed on the log scale and
+back-transformed, the interval is asymmetric on the natural scale, and a
+below-range sample typically gets a tight upper bound and a lower bound
+of 0.
+
+``` r
+
+mp <- classify_censoring_multiplate(mp)
+s  <- tidy_samples(mp)
+s[s$censor_class != "quantified",
+  c("sampleid", "censor_class", "censor_upper", "conc_q_hi", "p_below_lloq")]
+```
+
+`se_concentration` and `pcov` are unchanged by this — they are still
+computed from the invertible draws only. `frac_draws_below_a` /
+`frac_draws_above_d` show how many draws those legacy summaries leave
+out.
 
 ------------------------------------------------------------------------
 

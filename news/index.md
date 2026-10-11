@@ -1,5 +1,38 @@
 # Changelog
 
+## curveRcore 0.5.0
+
+### Out-of-range test samples: censoring, asymmetric intervals, threshold probabilities
+
+- New
+  [`classify_censoring()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring.md)
+  /
+  [`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md):
+  give every back-calculated sample a `censor_class` (`quantified`,
+  `lod_to_lloq`, `below_lod`, `below_lloq`, `above_uloq`, `saturated`,
+  `no_response`), a `censor_type` (`none`/`left`/`interval`/`right`) and
+  natural-scale, dilution-corrected `censor_lower`/`censor_upper`
+  bounds. Run after
+  [`classify_pcov_gates_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_pcov_gates_multiplate.md).
+  Classification uses the response scale first, so samples whose point
+  estimate could not be inverted (response beyond an asymptote) are now
+  placed on the correct side instead of `NA`.
+- New
+  [`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md):
+  the shared per-sample summary both engines use for
+  `conc_q_lo`/`conc_q_med`/`conc_q_hi` (2.5/50/97.5% predictive
+  quantiles, natural scale, dilution-corrected), `p_below_lloq`,
+  `p_above_uloq`, `p_below_cutoff` and `frac_draws_below_a`/`_above_d`.
+- New
+  [`invert_with_bounds()`](https://immunoplex.github.io/curveRcore/reference/invert_with_bounds.md)
+  (internal-use export): keeps draws beyond an asymptote as
+  `-Inf`/`+Inf` (censored) instead of dropping them.
+- `se_concentration` and `pcov` are unchanged (frozen, §3.3). The new
+  `frac_draws_*` columns report how many draws the legacy summaries
+  drop.
+- `test-pcov_gates.R` is now a real testthat suite (it previously ran as
+  an empty test).
+
 ## curveRcore 0.4.4
 
 ### Documented the study-design-column passthrough contract on `tidy_samples()`
