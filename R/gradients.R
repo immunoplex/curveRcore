@@ -56,7 +56,7 @@ grad_loglogistic4 <- function(y, a, b, c, d) {
 
   dc   <- 1 / Q^p   # = x_val / c
 
-  dQdd <- -1 / (y - a)
+  dQdd <-  1 / (y - a)   # Q = (d - y)/(y - a); previously had the wrong sign
   dd   <- -(c * p) * Q^(-p - 1) * dQdd
 
   dQdy <- (-(y - a) - (d - y)) / (y - a)^2  # = -(d-a)/(y-a)^2
@@ -77,11 +77,13 @@ grad_gompertz4 <- function(y, a, b, c, d) {
   # x = c - (1/b) * log(-log(R))  where R = (y-a)/(d-a)
   R  <- (y - a) / (d - a)
   L  <- -log(R)  # > 0 inside the curve's range
-  da <-  1 / (b * L * (y - a))   # via chain rule through R
   db <-  log(L) / b^2
   dc <-  1
   dd <- -1 / (b * L * (d - a))
-  dy <-  1 / (b * L * (y - a))   # note: same magnitude as da
+  dy <-  1 / (b * L * (y - a))
+  # x depends on (y, a, d) only through R = (y - a)/(d - a), so dx/da + dx/dd + dx/dy = 0.
+  # (Previously da was set equal to dy, missing the (d - a) dependence of R.)
+  da <- -(dy + dd)
   list(grad_theta = c(a = da, b = db, c = dc, d = dd), grad_y = dy)
 }
 
@@ -100,15 +102,14 @@ grad_logistic5 <- function(y, a, b, c, d, g) {
   Tg    <- T_val^(1 / g)
   W     <- Tg - 1
 
-  da <-  b * Tg / (g * W * (y - a))          # via ∂T/∂a chain
   db <- -log(W)
   dc <-  1
   dd <- -b * Tg / (g * W * (d - a))          # via ∂T/∂d
   dg <-  b * Tg * log(T_val) / (g^2 * W)
-  dy <- -b * (d - a) * Tg / (g * W * (y - a)^2 * T_val)
-
-  # Simplify dy: Tg/T_val = T_val^(1/g - 1)
-  dy <- -b * Tg / (g * W * (y - a))
+  dy <-  b * Tg / (g * W * (y - a))          # ∂T/∂y = -T/(y-a); dx/dy > 0 for b > 0
+  # x depends on (y, a, d) only through T = (d - a)/(y - a), so dx/da + dx/dd + dx/dy = 0.
+  # (Previously da was set to -dy, missing the (d - a) dependence of T, and dy had the wrong sign.)
+  da <- -(dy + dd)
 
   list(grad_theta = c(a = da, b = db, c = dc, d = dd, g = dg), grad_y = dy)
 }
@@ -128,12 +129,15 @@ grad_loglogistic5 <- function(y, a, b, c, d, g) {
   ratio_g <- ratio^(-g)
   V       <- ratio_g - 1
 
-  da <-  (1 / (b * V * g)) * ratio^(-g - 1) / (d - a)
+  # dx/dV = -1/(b V); dV/dratio = -g ratio^(-g-1); dV/dg = -ratio^(-g) log(ratio)
+  # (Previously the chain factors used 1/g where g multiplies, and dx/dg was wrong.)
+  k  <-  g * ratio^(-g - 1) / (b * V)
+  da <-  k * (y - d) / (d - a)^2
   db <-  (log(V) - log(g)) / b^2
   dc <-  1
-  dd <-  (1 / (b * V * g)) * ratio^(-g - 1) * (y - a) / (d - a)^2
-  dg <-  (1 / (b * g^2)) * (1 - log(g * V))
-  dy <-  ratio^(-g - 1) / (b * g * V * (d - a))
+  dd <- -k * (y - a) / (d - a)^2
+  dg <-  (ratio^(-g) * log(ratio) / V + 1 / g) / b
+  dy <-  k / (d - a)
 
   list(grad_theta = c(a = da, b = db, c = dc, d = dd, g = dg), grad_y = dy)
 }
@@ -164,7 +168,7 @@ grad_inv_loglogistic4_fixed <- function(y, fixed_a, b, c, d) {
   p  <- 1 / b
   db <- (c / Q^p) * log(Q) / b^2
   dc <- 1 / Q^p
-  dd <- (c * p) * Q^(-p - 1) / (y - fixed_a)
+  dd <- -(c * p) * Q^(-p - 1) / (y - fixed_a)   # x = c Q^(-1/b), dQ/dd = 1/(y - a); previously wrong sign
   c(b = db, c = dc, d = dd)
 }
 
@@ -211,7 +215,7 @@ grad_inv_loglogistic5_fixed <- function(y, fixed_a, b, c, d, g) {
   db <-  (log(V) - log(g)) / b^2
   dc <-  1.0
   dd <- -(1 / b) * ratio_g / V * g / (d - fixed_a)
-  dg <-  (1 / b) * (ratio_g / V * log(ratio) - 1 / g)
+  dg <-  (1 / b) * (ratio_g / V * log(ratio) + 1 / g)   # d/dg of -log(g)/(-b) is +1/(b g); previously wrong sign
   c(b = db, c = dc, d = dd, g = dg)
 }
 
