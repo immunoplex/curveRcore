@@ -1,6 +1,6 @@
 # Changelog
 
-## curveRcore 0.4.5
+## curveRcore 0.5.1
 
 ### Fixed analytic inverse-curve gradients (delta-method SEs)
 
