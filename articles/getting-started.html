@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -60,7 +60,7 @@
       <h1>Getting Started with curveRcore</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/immunoplex/curveRcore/blob/v0.5.1/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
       <div class="d-none name"><code>getting-started.Rmd</code></div>
     </div>
 
@@ -88,6 +88,11 @@ limits, and tidy extractors.</li>
 <li>
 <strong>curveRbayes</strong> — Bayesian calibration via Stan.</li>
 </ul>
+<p>A fourth package, <strong>curveRweights</strong>, sits downstream of
+the fits: it turns each sample’s reported precision into observation
+weights for comparison analyses. This vignette introduces it, and the
+censoring labels the fits produce for out-of-range samples, in the two
+sections before the <a href="#summary-section">Summary</a>.</p>
 <p>Both fitting engines return the same <code>calibration_result</code>
 object, so all downstream code — plots, extractors, detection-limit
 functions — works identically regardless of which engine produced the
@@ -986,7 +991,8 @@ asymptote</td>
 </table>
 <p>See <a href="#out-of-range-samples">Out-of-range samples</a> for how
 these are computed and for the censoring columns added by
-<code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code>.</p>
+<code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code>. The <a href="#censoring">Censoring</a> section below works through the classes
+and the analysis options.</p>
 <p>Any additional columns present in the original sample data (dilution,
 replicate number, patient ID, etc.) are carried through unchanged.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
@@ -1405,13 +1411,355 @@ curveRbayes, three comparison utilities are available:</p>
 <span>  <span class="va">cr_freq</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">predicted_log10_concentration</span>,</span>
 <span>  <span class="va">cr_bayes</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">predicted_log10_concentration</span></span>
 <span><span class="op">)</span></span></code></pre></div>
-<hr>
 </div>
 <div class="section level2">
-<h2 id="summary">Summary<a class="anchor" aria-label="anchor" href="#summary"></a>
+<h2 id="censoring">Censoring: samples outside the quantifiable range<a class="anchor" aria-label="anchor" href="#censoring"></a>
+</h2>
+<p>A back-calculated concentration is only as informative as the part of
+the curve it lands on. A response near the lower asymptote says “the
+concentration is small”, not <em>how</em> small; a response near the
+upper asymptote says “large”, with no upper bound. Treating those
+samples as ordinary numbers — or discarding them — biases every
+downstream summary, because <em>which</em> samples fall out of range
+depends on the thing you are trying to estimate. curveRcore therefore
+labels each sample with a <strong>censoring class</strong> and the
+<strong>bounds</strong> that class implies, so that censored-data
+methods can use the samples for what they do know.</p>
+<div class="section level3">
+<h3 id="classes-and-bounds">Classes and bounds<a class="anchor" aria-label="anchor" href="#classes-and-bounds"></a>
+</h3>
+<p><code><a href="../reference/classify_censoring.html">classify_censoring()</a></code> works from the response scale
+first, so a sample whose response lies beyond an asymptote — and which
+therefore has no finite point estimate — is still placed on the correct
+side.</p>
+<table class="table">
+<colgroup>
+<col width="25%">
+<col width="25%">
+<col width="25%">
+<col width="25%">
+</colgroup>
+<thead><tr class="header">
+<th><code>censor_class</code></th>
+<th>Meaning</th>
+<th><code>censor_type</code></th>
+<th>Bounds (natural, dilution-corrected)</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>quantified</code></td>
+<td>Between the LLOQ and ULOQ</td>
+<td><code>none</code></td>
+<td>— (use <code>final_concentration</code>)</td>
+</tr>
+<tr class="even">
+<td><code>lod_to_lloq</code></td>
+<td>Above the lower LOD, below the LLOQ</td>
+<td><code>interval</code></td>
+<td><code>[LOD, LLOQ] × dilution</code></td>
+</tr>
+<tr class="odd">
+<td><code>below_lod</code></td>
+<td>Response below the lower-LOD response</td>
+<td><code>left</code></td>
+<td><code>[0, LOD] × dilution</code></td>
+</tr>
+<tr class="even">
+<td><code>below_lloq</code></td>
+<td>Below the LLOQ and no LOD available</td>
+<td><code>left</code></td>
+<td><code>[0, LLOQ] × dilution</code></td>
+</tr>
+<tr class="odd">
+<td><code>above_uloq</code></td>
+<td>Above the ULOQ</td>
+<td><code>right</code></td>
+<td><code>(ULOQ, ∞) × dilution</code></td>
+</tr>
+<tr class="even">
+<td><code>saturated</code></td>
+<td>Response at or above the upper-LOD response</td>
+<td><code>right</code></td>
+<td><code>(ULOQ, ∞) × dilution</code></td>
+</tr>
+<tr class="odd">
+<td><code>no_response</code></td>
+<td>No usable response</td>
+<td><code>NA</code></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p><code>censor_type</code> uses the codes that survival-analysis and
+censored-regression software expect, and <code>censor_lower</code> /
+<code>censor_upper</code> hold the bounds with <code>NA</code> meaning
+unbounded. The single-curve function is useful for seeing the rules at
+work; in a pipeline you call
+<code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code> on a fitted result
+instead.</p>
+<div class="sourceCode" id="cb28"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># Illustrative numbers: a curve with asymptotes a = 1, d = 4 on the fitting</span></span>
+<span><span class="co"># (log10 response) scale, LLOQ = 10^0.5 and ULOQ = 10^3 before dilution.</span></span>
+<span><span class="va">smp</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  label    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"high"</span>, <span class="st">"mid"</span>, <span class="st">"just under LLOQ"</span>, <span class="st">"near the floor"</span>, <span class="st">"at the floor"</span>, <span class="st">"saturated"</span><span class="op">)</span>,</span>
+<span>  response <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3.7</span>, <span class="fl">2.4</span>, <span class="fl">1.55</span>, <span class="fl">1.25</span>, <span class="fl">1.02</span>, <span class="fl">3.995</span><span class="op">)</span>,</span>
+<span>  x_log10  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2.9</span>, <span class="fl">1.5</span>, <span class="fl">0.35</span>, <span class="cn">NA</span>, <span class="cn">NA</span>, <span class="cn">NA</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">cc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/classify_censoring.html">classify_censoring</a></span><span class="op">(</span></span>
+<span>  response <span class="op">=</span> <span class="va">smp</span><span class="op">$</span><span class="va">response</span>, x_log10 <span class="op">=</span> <span class="va">smp</span><span class="op">$</span><span class="va">x_log10</span>, dilution <span class="op">=</span> <span class="fl">100</span>,</span>
+<span>  lloq_log10 <span class="op">=</span> <span class="fl">0.5</span>, uloq_log10 <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>  lod_response <span class="op">=</span> <span class="fl">1.3</span>, ulod_response <span class="op">=</span> <span class="fl">3.8</span>,</span>
+<span>  lod_log10 <span class="op">=</span> <span class="fl">0.0</span>, ulod_log10 <span class="op">=</span> <span class="fl">3.4</span>,</span>
+<span>  a <span class="op">=</span> <span class="fl">1</span>, d <span class="op">=</span> <span class="fl">4</span></span>
+<span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">smp</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"label"</span>, <span class="st">"response"</span><span class="op">)</span><span class="op">]</span>, <span class="va">cc</span><span class="op">)</span></span>
+<span><span class="co">#&gt;             label response censor_class censor_type censor_lower censor_upper</span></span>
+<span><span class="co">#&gt; 1            high    3.700   quantified        none           NA           NA</span></span>
+<span><span class="co">#&gt; 2             mid    2.400   quantified        none           NA           NA</span></span>
+<span><span class="co">#&gt; 3 just under LLOQ    1.550  lod_to_lloq    interval        1e+02     316.2278</span></span>
+<span><span class="co">#&gt; 4  near the floor    1.250    below_lod        left           NA     100.0000</span></span>
+<span><span class="co">#&gt; 5    at the floor    1.020    below_lod        left           NA     100.0000</span></span>
+<span><span class="co">#&gt; 6       saturated    3.995    saturated       right        1e+05           NA</span></span></code></pre></div>
+<p>The samples with no <code>x_log10</code> have no finite estimate at
+all, yet each is placed on the correct side of the range.</p>
+</div>
+<div class="section level3">
+<h3 id="intervals-and-threshold-probabilities">Intervals and threshold probabilities<a class="anchor" aria-label="anchor" href="#intervals-and-threshold-probabilities"></a>
+</h3>
+<p>Bounds say where a censored sample <em>must</em> lie; they do not say
+where it <em>most likely</em> lies inside that region, and for a
+quantified sample the symmetric <code>pcov</code> ignores that
+uncertainty is wider on one side. Both fitting engines therefore
+back-calculate every sample many times — once per posterior draw
+(curveRbayes) or per Monte Carlo draw of the fitted parameters plus
+residual noise (curveRfreq). A draw whose response falls beyond <em>that
+draw’s</em> asymptote is kept as <code>-Inf</code> (concentration 0) or
+<code>+Inf</code> (unbounded) rather than dropped, and
+<code><a href="../reference/summarize_conc_draws.html">summarize_conc_draws()</a></code> turns the draw matrix into the
+interval and probability columns of <code>$samples</code>:</p>
+<div class="sourceCode" id="cb29"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">n_draw</span> <span class="op">&lt;-</span> <span class="fl">2000</span></span>
+<span><span class="co"># rows = samples, columns = draws; pre-dilution log10 concentration</span></span>
+<span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">rbind</a></span><span class="op">(</span></span>
+<span>  well_inside  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_draw</span>, <span class="fl">1.5</span>, <span class="fl">0.10</span><span class="op">)</span>,                              <span class="co"># comfortably quantified</span></span>
+<span>  near_floor   <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_draw</span>, <span class="fl">0.2</span>, <span class="fl">0.60</span><span class="op">)</span>,                              <span class="co"># straddles the LLOQ</span></span>
+<span>  at_floor     <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="op">-</span><span class="cn">Inf</span>, <span class="fl">1400</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_draw</span> <span class="op">-</span> <span class="fl">1400</span>, <span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>,    <span class="co"># 70% of draws beyond a</span></span>
+<span>  near_ceiling <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span> <span class="cn">Inf</span>,  <span class="fl">300</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n_draw</span> <span class="op">-</span>  <span class="fl">300</span>, <span class="fl">2.9</span>, <span class="fl">0.3</span><span class="op">)</span><span class="op">)</span>     <span class="co"># 15% beyond d</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">out</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/summarize_conc_draws.html">summarize_conc_draws</a></span><span class="op">(</span><span class="va">x</span>, dilution <span class="op">=</span> <span class="fl">100</span>, lloq_log10 <span class="op">=</span> <span class="fl">0.5</span>, uloq_log10 <span class="op">=</span> <span class="fl">3</span>,</span>
+<span>                            decision_cutoff <span class="op">=</span> <span class="fl">50</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span>sample <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">x</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">out</span>, <span class="fl">3</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;         sample conc_q_lo conc_q_med conc_q_hi p_below_lloq p_above_uloq</span></span>
+<span><span class="co">#&gt; 1  well_inside  1950.795   3136.692  5043.193        0.000        0.000</span></span>
+<span><span class="co">#&gt; 2   near_floor     9.217    158.480  2532.980        0.679        0.000</span></span>
+<span><span class="co">#&gt; 3     at_floor     0.000      0.000   569.844        0.944        0.000</span></span>
+<span><span class="co">#&gt; 4 near_ceiling 21924.615  90287.755        NA        0.000        0.452</span></span>
+<span><span class="co">#&gt;   p_below_cutoff frac_draws_below_a frac_draws_above_d</span></span>
+<span><span class="co">#&gt; 1          0.000                0.0               0.00</span></span>
+<span><span class="co">#&gt; 2          0.202                0.0               0.00</span></span>
+<span><span class="co">#&gt; 3          0.766                0.7               0.00</span></span>
+<span><span class="co">#&gt; 4          0.000                0.0               0.15</span></span></code></pre></div>
+<p>Read across the rows. <code>at_floor</code> gets
+<code>conc_q_lo = 0</code> and a bounded upper quantile: it is almost
+certainly below the LLOQ (<code>p_below_lloq</code>), and it is
+<em>informative</em> for a threshold question such as “below 50?”
+(<code>p_below_cutoff</code>) even though its <code>pcov</code> would be
+capped at the maximum. <code>near_ceiling</code> gets
+<code>conc_q_hi = NA</code> because more than 2.5 % of its draws are
+unbounded above. <code>frac_draws_below_a</code> and
+<code>frac_draws_above_d</code> report how much of each sample’s
+predictive distribution the legacy <code>se_concentration</code> /
+<code>pcov</code> silently leave out; those two summaries are
+deliberately unchanged.</p>
+</div>
+<div class="section level3">
+<h3 id="analysing-censored-samples">Analysing censored samples<a class="anchor" aria-label="anchor" href="#analysing-censored-samples"></a>
+</h3>
+<p>Put the bounds on a log10 scale once, in the
+<code>Surv(type = "interval2")</code> convention
+(<code>y_lo == y_hi</code> for an exact value, <code>NA</code> for an
+unbounded side):</p>
+<div class="sourceCode" id="cb30"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">as_interval2</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">final_concentration</span><span class="op">)</span></span>
+<span>  <span class="va">lo</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">censor_type</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"interval"</span>, <span class="st">"right"</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">censor_lower</span><span class="op">)</span>, <span class="cn">NA_real_</span><span class="op">)</span></span>
+<span>  <span class="va">hi</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">censor_type</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"left"</span>, <span class="st">"interval"</span><span class="op">)</span>,  <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">s</span><span class="op">$</span><span class="va">censor_upper</span><span class="op">)</span>, <span class="cn">NA_real_</span><span class="op">)</span></span>
+<span>  <span class="va">none</span> <span class="op">&lt;-</span> <span class="va">s</span><span class="op">$</span><span class="va">censor_type</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="st">"none"</span></span>
+<span>  <span class="va">lo</span><span class="op">[</span><span class="va">none</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">y</span><span class="op">[</span><span class="va">none</span><span class="op">]</span>; <span class="va">hi</span><span class="op">[</span><span class="va">none</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="va">y</span><span class="op">[</span><span class="va">none</span><span class="op">]</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">s</span>, y_lo <span class="op">=</span> <span class="va">lo</span>, y_hi <span class="op">=</span> <span class="va">hi</span><span class="op">)</span></span>
+<span><span class="op">}</span></span></code></pre></div>
+<p>The cost of ignoring the censoring is easy to see on simulated data.
+Below, about a third of a group’s true values lie under the
+quantification limit:</p>
+<div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
+<span><span class="va">n</span>    <span class="op">&lt;-</span> <span class="fl">400</span></span>
+<span><span class="va">true</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">n</span>, mean <span class="op">=</span> <span class="fl">0.6</span>, sd <span class="op">=</span> <span class="fl">0.7</span><span class="op">)</span>          <span class="co"># log10 concentration; truth: mean 0.6</span></span>
+<span><span class="va">lloq</span> <span class="op">&lt;-</span> <span class="fl">0.3</span></span>
+<span><span class="va">cens</span> <span class="op">&lt;-</span> <span class="va">true</span> <span class="op">&lt;</span> <span class="va">lloq</span></span>
+<span><span class="va">sim</span>  <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span></span>
+<span>  final_concentration <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">cens</span>, <span class="fl">10</span><span class="op">^</span><span class="va">lloq</span> <span class="op">/</span> <span class="fl">2</span>, <span class="fl">10</span><span class="op">^</span><span class="va">true</span><span class="op">)</span>,   <span class="co"># LLOQ/2 stand-in when censored</span></span>
+<span>  censor_type  <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">cens</span>, <span class="st">"left"</span>, <span class="st">"none"</span><span class="op">)</span>,</span>
+<span>  censor_lower <span class="op">=</span> <span class="cn">NA_real_</span>,</span>
+<span>  censor_upper <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">cens</span>, <span class="fl">10</span><span class="op">^</span><span class="va">lloq</span>, <span class="cn">NA_real_</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu">as_interval2</span><span class="op">(</span><span class="va">sim</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">tob</span> <span class="op">&lt;-</span> <span class="fu">survival</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/survival/man/survreg.html" class="external-link">survreg</a></span><span class="op">(</span><span class="fu">survival</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/survival/man/Surv.html" class="external-link">Surv</a></span><span class="op">(</span><span class="va">y_lo</span>, <span class="va">y_hi</span>, type <span class="op">=</span> <span class="st">"interval2"</span><span class="op">)</span> <span class="op">~</span> <span class="fl">1</span>,</span>
+<span>                         data <span class="op">=</span> <span class="va">sim</span>, dist <span class="op">=</span> <span class="st">"gaussian"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>truth                  <span class="op">=</span> <span class="fl">0.6</span>,</span>
+<span>  complete_case          <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">final_concentration</span><span class="op">[</span><span class="op">!</span><span class="va">cens</span><span class="op">]</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  substitute_LLOQ_over_2 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/mean.html" class="external-link">mean</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log10</a></span><span class="op">(</span><span class="va">sim</span><span class="op">$</span><span class="va">final_concentration</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  censored_likelihood    <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/unname.html" class="external-link">unname</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">tob</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;                  truth          complete_case substitute_LLOQ_over_2 </span></span>
+<span><span class="co">#&gt;              0.6000000              0.9491793              0.6403612 </span></span>
+<span><span class="co">#&gt;    censored_likelihood </span></span>
+<span><span class="co">#&gt;              0.5954241</span></span></code></pre></div>
+<p>Dropping the censored rows overstates the mean; substitution errs by
+an amount that depends on the arbitrary fraction chosen and understates
+the variance. The censored-likelihood (Tobit) estimate recovers the
+truth. For regression models, repeated measures, Bayesian likelihoods,
+survival-style nonparametrics and threshold classification, see
+<code>vignette("analysing-ispi-exports", package = "curveR")</code>.</p>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="precision-weights">Precision weights with curveRweights<a class="anchor" aria-label="anchor" href="#precision-weights"></a>
+</h2>
+<p>Censoring deals with samples the curve cannot measure. A separate
+problem affects the samples it <em>can</em> measure: their precision is
+not constant. <code>pcov</code> and <code>se_concentration</code> follow
+a U-shaped profile along the curve — small in the middle, large near
+both asymptotes — so a plain average or regression treats a noisy sample
+and a sharp one as equally trustworthy.</p>
+<p><strong>curveRweights</strong> converts that profile into
+<strong>continuous observation weights</strong>. It does not use
+<code>1 / se^2</code> directly, because the delta-method standard error
+is a model-based prediction and is not guaranteed to be calibrated
+against the scatter you actually see between samples. Instead it
+estimates, from your data, how residual variance relates to the reported
+precision:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>σ</mi><mi>i</mi></msub><mo>=</mo><mi>ϕ</mi><mo>⋅</mo><msubsup><mi>s</mi><mi>i</mi><msub><mi>β</mi><mn>1</mn></msub></msubsup><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>w</mi><mi>i</mi></msub><mo>=</mo><mn>1</mn><mi>/</mi><msubsup><mi>σ</mi><mi>i</mi><mn>2</mn></msubsup></mrow><annotation encoding="application/x-tex"> \sigma_i = \phi \cdot s_i^{\beta_1}, \qquad w_i = 1 / \sigma_i^2 </annotation></semantics></math></p>
+<p>where
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>s</mi><mi>i</mi></msub><annotation encoding="application/x-tex">s_i</annotation></semantics></math>
+is <code>se_concentration</code> (or <code>pcov</code>) for sample
+<em>i</em>. The location model is a <strong>saturated
+cell-means</strong> model (one mean per design cell, e.g. arm ×
+timepoint), so any structure in the means is absorbed there and cannot
+leak into the scale estimate.</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Estimate</th>
+<th>Reads as</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϕ</mi><mo>≈</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\phi \approx 1</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>≈</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\beta_1 \approx 1</annotation></semantics></math>
+</td>
+<td>The curve’s reported precision is about right</td>
+</tr>
+<tr class="even">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϕ</mi><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\phi &gt; 1</annotation></semantics></math></td>
+<td>Extra variance beyond measurement error (biology, plate
+effects)</td>
+</tr>
+<tr class="odd">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>&lt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\beta_1 &lt; 1</annotation></semantics></math></td>
+<td>Weights are flatter than the reported precision suggests</td>
+</tr>
+<tr class="even">
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mn>1</mn></msub><mo>&gt;</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\beta_1 &gt; 1</annotation></semantics></math></td>
+<td>Reported precision differences are amplified in the data</td>
+</tr>
+</tbody>
+</table>
+<div class="sourceCode" id="cb32"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="co"># What the weight model implies, for illustrative values of (phi, beta1)</span></span>
+<span><span class="va">se</span> <span class="op">&lt;-</span> <span class="fl">10</span><span class="op">^</span><span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="op">-</span><span class="fl">1.3</span>, <span class="fl">0.1</span>, length.out <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span>
+<span><span class="va">prof</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>delta_method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">1</span><span class="op">)</span>, flatter <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="fl">0.6</span><span class="op">)</span>, steeper <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.8</span>, <span class="fl">1.9</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>               <span class="kw">function</span><span class="op">(</span><span class="va">p</span><span class="op">)</span> <span class="fl">1</span> <span class="op">/</span> <span class="op">(</span><span class="va">p</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span> <span class="op">*</span> <span class="va">se</span><span class="op">^</span><span class="va">p</span><span class="op">[</span><span class="fl">2</span><span class="op">]</span><span class="op">)</span><span class="op">^</span><span class="fl">2</span><span class="op">)</span></span>
+<span><span class="va">prof</span> <span class="op">&lt;-</span> <span class="va">prof</span> <span class="op">/</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">prof</span>, <span class="fl">2</span>, <span class="va">max</span><span class="op">)</span>            <span class="co"># compare shapes on a common scale</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/matplot.html" class="external-link">matplot</a></span><span class="op">(</span><span class="va">se</span>, <span class="va">prof</span>, type <span class="op">=</span> <span class="st">"l"</span>, lty <span class="op">=</span> <span class="fl">1</span>, lwd <span class="op">=</span> <span class="fl">2</span>, log <span class="op">=</span> <span class="st">"xy"</span>,</span>
+<span>        xlab <span class="op">=</span> <span class="st">"se_concentration (log10 SD)"</span>, ylab <span class="op">=</span> <span class="st">"relative weight"</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/graphics/legend.html" class="external-link">legend</a></span><span class="op">(</span><span class="st">"topright"</span>, legend <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">prof</span><span class="op">)</span>, col <span class="op">=</span> <span class="fl">1</span><span class="op">:</span><span class="fl">3</span>, lty <span class="op">=</span> <span class="fl">1</span>, lwd <span class="op">=</span> <span class="fl">2</span>, bty <span class="op">=</span> <span class="st">"n"</span><span class="op">)</span></span></code></pre></div>
+<p><img src="getting-started_files/figure-html/weights-profile-1.png" class="r-plt" alt="" width="100%"></p>
+<div class="section level3">
+<h3 id="the-workflow">The workflow<a class="anchor" aria-label="anchor" href="#the-workflow"></a>
+</h3>
+<p>curveRweights builds on curveRcore (it imports it) and needs
+<code>brms</code> and a Stan backend, so this vignette shows the calls
+rather than running them. Three things matter:</p>
+<ol style="list-style-type: decimal">
+<li>
+<strong>Design columns ride along.</strong> The factors that define
+your comparison cells must be columns on the <code>samples</code> you
+give the fitting function; the fitters carry them through into
+<code>$samples</code>.</li>
+<li>
+<strong>Weights are estimated once, from the whole batch</strong>,
+then reused.</li>
+<li>
+<strong>Weights apply to test samples</strong>, not to
+standards.</li>
+</ol>
+<div class="sourceCode" id="cb33"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">curveRweights</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 1. Fit curves as usual (samples must carry timeperiod and cohort_arm)</span></span>
+<span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu">curveRfreq</span><span class="fu">::</span><span class="fu">fit_calibration_freq_multiplate</span><span class="op">(</span></span>
+<span>  standards <span class="op">=</span> <span class="va">std_preprocessed</span>, samples <span class="op">=</span> <span class="va">samples_with_design</span>,</span>
+<span>  response_var <span class="op">=</span> <span class="st">"mfi"</span>, is_log_response <span class="op">=</span> <span class="cn">TRUE</span>, is_log_independent <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute_detection_limits_multiplate.html">compute_detection_limits_multiplate</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span>
+<span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/classify_pcov_gates_multiplate.html">classify_pcov_gates_multiplate</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span>
+<span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 2. Weight-input frame -&gt; estimate (phi, beta1) -&gt; inspect</span></span>
+<span><span class="va">wd</span> <span class="op">&lt;-</span> <span class="fu">as_weight_data</span><span class="op">(</span><span class="va">mp</span>, design <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"timeperiod"</span>, <span class="st">"cohort_arm"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">pw</span> <span class="op">&lt;-</span> <span class="fu">fit_precision_weights</span><span class="op">(</span><span class="va">wd</span><span class="op">)</span></span>
+<span><span class="va">pw</span>                                   <span class="co"># phi, beta1 with intervals and a plain-language regime</span></span>
+<span><span class="fu">weight_diagnostics</span><span class="op">(</span><span class="va">pw</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># 3. Attach weights to the sample table, or evaluate them on the precision grid</span></span>
+<span><span class="va">samples_w</span> <span class="op">&lt;-</span> <span class="fu">join_weights</span><span class="op">(</span><span class="fu"><a href="../reference/tidy_samples.html">tidy_samples</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span>, <span class="va">pw</span><span class="op">)</span></span>
+<span><span class="va">profile</span>   <span class="op">&lt;-</span> <span class="fu">predict_weights</span><span class="op">(</span><span class="va">pw</span>, newdata <span class="op">=</span> <span class="va">mp</span><span class="op">)</span></span></code></pre></div>
+<p><code>w</code> is the raw inverse-variance weight and
+<code>w_norm</code> is rescaled so weighted and unweighted estimates
+share a scale. For data that did not come from a curveR fit, the
+standalone path (<code>prepare_cv()</code> → <code>diagnose_cv()</code>
+→ <code>fit_saturated_weight_batch()</code>) estimates the same model;
+see
+<code>vignette("precision-weighting", package = "curveRweights")</code>.</p>
+</div>
+<div class="section level3">
+<h3 id="weights-and-censoring-are-different-tools">Weights and censoring are different tools<a class="anchor" aria-label="anchor" href="#weights-and-censoring-are-different-tools"></a>
+</h3>
+<p>Weights describe how noisy a <em>measured</em> sample is; they do not
+say what to do with a sample that is out of range. Inverse-variance
+weighting down-weights exactly the samples whose precision is poor
+because their concentration is low or high, so weighted means drift
+towards the middle of the curve. Use the weights for
+<code>quantified</code> samples and represent out-of-range samples by
+their censoring bounds (previous section). The worked demonstration, and
+the way to combine the two, are in the curveRweights vignette
+<code>vignette("precision-weighting", package = "curveRweights")</code>,
+section “Weights and censored samples”.</p>
+<hr>
+</div>
+</div>
+<div class="section level2">
+<h2 id="summary-section">Summary<a class="anchor" aria-label="anchor" href="#summary-section"></a>
 </h2>
 <p>curveRcore provides six interconnected layers shared by all fitting
-engines:</p>
+engines, and two follow-on analyses that build on them:</p>
 <ol style="list-style-type: decimal">
 <li><p><strong>Datasets</strong> — <code>bead_assay_example</code>
 (Luminex) and <code>elisa_assay_example</code> (ELISA) for testing and
@@ -1437,6 +1785,17 @@ boundary-constrained models before AIC / LOO ranking.</p></li>
 <code><a href="../reference/tidy_samples.html">tidy_samples()</a></code> and <code><a href="../reference/tidy_grid.html">tidy_grid()</a></code>; pcov / SE
 conversion utilities; detection-limit functions; and cross-method
 comparison helpers.</p></li>
+<li><p><strong>Censoring</strong> —
+<code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code> labels samples that fall
+outside the quantifiable range (<code>censor_class</code>,
+<code>censor_type</code>, bounds), and
+<code><a href="../reference/summarize_conc_draws.html">summarize_conc_draws()</a></code> gives asymmetric intervals and
+threshold probabilities that keep out-of-range draws as
+censored.</p></li>
+<li><p><strong>Precision weights</strong> — curveRweights estimates
+observation weights from the precision profile for in-range samples;
+out-of-range samples are represented by their censoring bounds
+instead.</p></li>
 </ol>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

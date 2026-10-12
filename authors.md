@@ -13,16 +13,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/immunoplex/curveRcore/blob/v0.5.1/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/immunoplex/curveRcore/blob/main/DESCRIPTION)
 
 Zens M, Stein S, Gupta H, Hoen A (2026). *curveRcore: Shared Model
 Mathematics for Immunoassay Calibration Curves*. R package version
-0.5.1, <https://github.com/immunoplex/curveRcore>.
+0.5.2, <https://github.com/immunoplex/curveRcore>.
 
     @Manual{,
       title = {curveRcore: Shared Model Mathematics for Immunoassay Calibration Curves},
       author = {Michael Scot Zens and Seamus O. Stein and Hardik Gupta and Anne G. Hoen},
       year = {2026},
-      note = {R package version 0.5.1},
+      note = {R package version 0.5.2},
       url = {https://github.com/immunoplex/curveRcore},
     }

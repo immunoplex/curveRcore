@@ -1,5 +1,18 @@
 # Changelog
 
+## curveRcore 0.5.2
+
+### Documentation
+
+- [`vignette("getting-started")`](https://immunoplex.github.io/curveRcore/articles/getting-started.md)
+  gains a **Censoring** section (classes, bounds,
+  [`classify_censoring()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring.md),
+  [`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md),
+  and why censored samples should not be dropped or substituted) and a
+  **Precision weights with curveRweights** section (the weight model,
+  the workflow, and why weights and censoring are separate tools). The
+  ecosystem overview now includes curveRweights.
+
 ## curveRcore 0.5.1
 
 ### Fixed analytic inverse-curve gradients (delta-method SEs)
