@@ -33,13 +33,22 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/v0.5.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.5.0" id="curvercore-050">curveRcore 0.5.0<a class="anchor" aria-label="anchor" href="#curvercore-050"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.4.5" id="curvercore-045">curveRcore 0.4.5<a class="anchor" aria-label="anchor" href="#curvercore-045"></a></h2>
 <div class="section level3">
-<h3 id="out-of-range-test-samples-censoring-asymmetric-intervals-threshold-probabilities-0-5-0">Out-of-range test samples: censoring, asymmetric intervals, threshold probabilities<a class="anchor" aria-label="anchor" href="#out-of-range-test-samples-censoring-asymmetric-intervals-threshold-probabilities-0-5-0"></a></h3>
+<h3 id="fixed-analytic-inverse-curve-gradients-delta-method-ses-0-4-5">Fixed analytic inverse-curve gradients (delta-method SEs)<a class="anchor" aria-label="anchor" href="#fixed-analytic-inverse-curve-gradients-delta-method-ses-0-4-5"></a></h3>
+<ul><li>
+<code><a href="../reference/grad_logistic5.html">grad_logistic5()</a></code> and <code><a href="../reference/grad_gompertz4.html">grad_gompertz4()</a></code>: dx/da was set equal to (minus) dx/dy, missing the (d - a) dependence of the inverse; <code><a href="../reference/grad_logistic5.html">grad_logistic5()</a></code> also returned dx/dy with the wrong sign.</li>
+<li>
+<code><a href="../reference/grad_loglogistic5.html">grad_loglogistic5()</a></code>: dx/da, dx/dd and dx/dg corrected; <code><a href="../reference/grad_loglogistic4.html">grad_loglogistic4()</a></code> and <code>grad_inv_loglogistic4_fixed()</code>: dx/dd sign corrected; <code>grad_inv_loglogistic5_fixed()</code>: sign of the 1/g term of dx/dg corrected.</li>
+<li>These feed the delta-method sample SEs in curveRfreq; NLS 5PL, Gompertz and log-logistic SEs (and CV-based reportability, coverage and any precision-profile gate) computed with earlier versions are affected. 4PL is unaffected.</li>
+<li>New tests check every analytic gradient, including <code>grad_y_*_fixed()</code>, against finite differences of the inverse functions at several parameter sets (including g &gt; 1). # curveRcore 0.5.0</li>
+</ul></div>
+<div class="section level3">
+<h3 id="out-of-range-test-samples-censoring-asymmetric-intervals-threshold-probabilities-0-4-5">Out-of-range test samples: censoring, asymmetric intervals, threshold probabilities<a class="anchor" aria-label="anchor" href="#out-of-range-test-samples-censoring-asymmetric-intervals-threshold-probabilities-0-4-5"></a></h3>
 <ul><li>New <code><a href="../reference/classify_censoring.html">classify_censoring()</a></code> / <code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code>: give every back-calculated sample a <code>censor_class</code> (<code>quantified</code>, <code>lod_to_lloq</code>, <code>below_lod</code>, <code>below_lloq</code>, <code>above_uloq</code>, <code>saturated</code>, <code>no_response</code>), a <code>censor_type</code> (<code>none</code>/<code>left</code>/<code>interval</code>/<code>right</code>) and natural-scale, dilution-corrected <code>censor_lower</code>/<code>censor_upper</code> bounds. Run after <code><a href="../reference/classify_pcov_gates_multiplate.html">classify_pcov_gates_multiplate()</a></code>. Classification uses the response scale first, so samples whose point estimate could not be inverted (response beyond an asymptote) are now placed on the correct side instead of <code>NA</code>.</li>
 <li>New <code><a href="../reference/summarize_conc_draws.html">summarize_conc_draws()</a></code>: the shared per-sample summary both engines use for <code>conc_q_lo</code>/<code>conc_q_med</code>/<code>conc_q_hi</code> (2.5/50/97.5% predictive quantiles, natural scale, dilution-corrected), <code>p_below_lloq</code>, <code>p_above_uloq</code>, <code>p_below_cutoff</code> and <code>frac_draws_below_a</code>/<code>_above_d</code>.</li>
 <li>New <code><a href="../reference/invert_with_bounds.html">invert_with_bounds()</a></code> (internal-use export): keeps draws beyond an asymptote as <code>-Inf</code>/<code>+Inf</code> (censored) instead of dropping them.</li>

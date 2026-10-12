@@ -1,6 +1,29 @@
 # Changelog
 
-## curveRcore 0.5.0
+## curveRcore 0.4.5
+
+### Fixed analytic inverse-curve gradients (delta-method SEs)
+
+- [`grad_logistic5()`](https://immunoplex.github.io/curveRcore/reference/grad_logistic5.md)
+  and
+  [`grad_gompertz4()`](https://immunoplex.github.io/curveRcore/reference/grad_gompertz4.md):
+  dx/da was set equal to (minus) dx/dy, missing the (d - a) dependence
+  of the inverse;
+  [`grad_logistic5()`](https://immunoplex.github.io/curveRcore/reference/grad_logistic5.md)
+  also returned dx/dy with the wrong sign.
+- [`grad_loglogistic5()`](https://immunoplex.github.io/curveRcore/reference/grad_loglogistic5.md):
+  dx/da, dx/dd and dx/dg corrected;
+  [`grad_loglogistic4()`](https://immunoplex.github.io/curveRcore/reference/grad_loglogistic4.md)
+  and `grad_inv_loglogistic4_fixed()`: dx/dd sign corrected;
+  `grad_inv_loglogistic5_fixed()`: sign of the 1/g term of dx/dg
+  corrected.
+- These feed the delta-method sample SEs in curveRfreq; NLS 5PL,
+  Gompertz and log-logistic SEs (and CV-based reportability, coverage
+  and any precision-profile gate) computed with earlier versions are
+  affected. 4PL is unaffected.
+- New tests check every analytic gradient, including `grad_y_*_fixed()`,
+  against finite differences of the inverse functions at several
+  parameter sets (including g \> 1). \# curveRcore 0.5.0
 
 ### Out-of-range test samples: censoring, asymmetric intervals, threshold probabilities
 
