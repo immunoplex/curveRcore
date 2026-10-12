@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.4.4</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -935,14 +935,14 @@ frame with one row per sample replicate:</p>
 </tr>
 <tr class="odd">
 <td><code>final_concentration</code></td>
-<td>Pre-dilution concentration:
-<code>10^predicted_concentration × dilution</code>
+<td>Dilution-corrected concentration:
+<code>10^predicted_log10_concentration × dilution</code>
 </td>
 </tr>
 <tr class="even">
 <td><code>se_concentration</code></td>
-<td>Delta-method SD of <code>predicted_log10_concentration</code>
-</td>
+<td>SD of <code>predicted_log10_concentration</code> (delta method, or
+posterior SD)</td>
 </tr>
 <tr class="odd">
 <td><code>pcov</code></td>
@@ -954,8 +954,39 @@ frame with one row per sample replicate:</p>
 <td><code>pcov_pass</code></td>
 <td>Logical; whether precision meets the acceptance threshold</td>
 </tr>
+<tr class="odd">
+<td>
+<code>conc_q_lo</code>, <code>conc_q_med</code>,
+<code>conc_q_hi</code>
+</td>
+<td>2.5 / 50 / 97.5 % predictive quantiles of the concentration, natural
+scale, dilution-corrected</td>
+</tr>
+<tr class="even">
+<td>
+<code>p_below_lloq</code>, <code>p_above_uloq</code>
+</td>
+<td>Probability the concentration is below the LLOQ / above the
+ULOQ</td>
+</tr>
+<tr class="odd">
+<td><code>p_below_cutoff</code></td>
+<td>Probability the dilution-corrected concentration is below
+<code>decision_cutoff</code> (<code>NA</code> if none)</td>
+</tr>
+<tr class="even">
+<td>
+<code>frac_draws_below_a</code>,
+<code>frac_draws_above_d</code>
+</td>
+<td>Share of draws whose response lay beyond the low / high
+asymptote</td>
+</tr>
 </tbody>
 </table>
+<p>See <a href="#out-of-range-samples">Out-of-range samples</a> for how
+these are computed and for the censoring columns added by
+<code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code>.</p>
 <p>Any additional columns present in the original sample data (dilution,
 replicate number, patient ID, etc.) are carried through unchanged.</p>
 <div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
@@ -1062,6 +1093,79 @@ CI-modified versions of the fitted curve:</p>
 <code class="sourceCode R"><span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/compute_detection_limits_multiplate.html">compute_detection_limits_multiplate</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span></code></pre></div>
 <hr>
 </div>
+<div class="section level3">
+<h3 id="out-of-range-samples">Out-of-range samples: censoring, intervals and threshold
+probabilities<a class="anchor" aria-label="anchor" href="#out-of-range-samples"></a>
+</h3>
+<p><code>pcov</code> summarises a sample’s uncertainty as one symmetric
+number on the log₁₀ scale. That cannot distinguish a sample
+<strong>below</strong> the LLOQ — whose true concentration is bounded
+between 0 and roughly the LLOQ — from one <strong>above</strong> the
+ULOQ, which has no upper bound. Two pieces of output carry that missing
+information.</p>
+<p><strong>Censoring.</strong>
+<code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code> (run after
+<code><a href="../reference/compute_detection_limits_multiplate.html">compute_detection_limits_multiplate()</a></code> and
+<code><a href="../reference/classify_pcov_gates_multiplate.html">classify_pcov_gates_multiplate()</a></code>) adds:</p>
+<table class="table">
+<colgroup>
+<col width="50%">
+<col width="50%">
+</colgroup>
+<thead><tr class="header">
+<th>Column</th>
+<th>Description</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td><code>censor_class</code></td>
+<td>
+<code>quantified</code>, <code>lod_to_lloq</code>,
+<code>below_lod</code>, <code>below_lloq</code> (no LOD available),
+<code>above_uloq</code>, <code>saturated</code> (response at/above the
+upper LOD), <code>no_response</code>
+</td>
+</tr>
+<tr class="even">
+<td><code>censor_type</code></td>
+<td>
+<code>none</code>, <code>left</code>, <code>interval</code>,
+<code>right</code> — the codes censored-data methods expect</td>
+</tr>
+<tr class="odd">
+<td>
+<code>censor_lower</code>, <code>censor_upper</code>
+</td>
+<td>Bounds on the natural, dilution-corrected scale; <code>NA</code> =
+unbounded</td>
+</tr>
+</tbody>
+</table>
+<p>The response scale is checked first, so a sample whose response lies
+beyond an asymptote — and therefore has no finite point estimate — is
+still assigned the right side.</p>
+<p><strong>Predictive draws.</strong> Each engine back-calculates every
+sample many times (Bayesian: once per posterior draw; frequentist: once
+per Monte Carlo draw from the fitted parameter distribution plus
+residual noise). A draw whose response falls beyond that draw’s
+asymptote is kept as censored (<code>-Inf</code> / <code>+Inf</code> on
+the log₁₀ scale, via <code><a href="../reference/invert_with_bounds.html">invert_with_bounds()</a></code>) rather than
+dropped, and <code><a href="../reference/summarize_conc_draws.html">summarize_conc_draws()</a></code> turns the draws into
+the quantile and probability columns in the table above. Because the
+quantiles are computed on the log scale and back-transformed, the
+interval is asymmetric on the natural scale, and a below-range sample
+typically gets a tight upper bound and a lower bound of 0.</p>
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">mp</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span>
+<span><span class="va">s</span>  <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy_samples.html">tidy_samples</a></span><span class="op">(</span><span class="va">mp</span><span class="op">)</span></span>
+<span><span class="va">s</span><span class="op">[</span><span class="va">s</span><span class="op">$</span><span class="va">censor_class</span> <span class="op">!=</span> <span class="st">"quantified"</span>,</span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"sampleid"</span>, <span class="st">"censor_class"</span>, <span class="st">"censor_upper"</span>, <span class="st">"conc_q_hi"</span>, <span class="st">"p_below_lloq"</span><span class="op">)</span><span class="op">]</span></span></code></pre></div>
+<p><code>se_concentration</code> and <code>pcov</code> are unchanged by
+this — they are still computed from the invertible draws only.
+<code>frac_draws_below_a</code> / <code>frac_draws_above_d</code> show
+how many draws those legacy summaries leave out.</p>
+<hr>
+</div>
 </div>
 <div class="section level2">
 <h2 id="eligibility-gating">Eligibility gating<a class="anchor" aria-label="anchor" href="#eligibility-gating"></a>
@@ -1144,7 +1248,7 @@ should be treated with caution.</p>
 <code>ensemble[[model]]$eligibility</code>. The <code>$gates</code> data
 frame has columns <code>gate</code>, <code>passed</code>, and
 <code>detail</code>:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw">for</span> <span class="op">(</span><span class="va">nm</span> <span class="kw">in</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span>
 <span>  <span class="va">elig</span> <span class="op">&lt;-</span> <span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span><span class="op">[[</span><span class="va">nm</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">eligibility</span></span>
 <span>  <span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"\n── %s  (eligible = %s) ──\n"</span>, <span class="va">nm</span>, <span class="va">elig</span><span class="op">$</span><span class="va">eligible</span><span class="op">)</span><span class="op">)</span></span>
@@ -1207,7 +1311,7 @@ observation noise.</li>
 the curve changes curvature most rapidly, independent of measurement
 uncertainty. It typically gives a tighter (narrower) range.</li>
 </ul>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">best_nm</span>  <span class="op">&lt;-</span> <span class="va">cr</span><span class="op">$</span><span class="va">selection</span><span class="op">$</span><span class="va">best_model_name</span></span>
 <span><span class="va">elig</span>     <span class="op">&lt;-</span> <span class="va">cr</span><span class="op">$</span><span class="va">ensemble</span><span class="op">[[</span><span class="va">best_nm</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">eligibility</span></span>
 <span></span>
@@ -1232,7 +1336,7 @@ both the single-plate and multiplate classes.</p>
 <h3 id="tidy_samples-sample-predictions">
 <code>tidy_samples()</code> — sample predictions<a class="anchor" aria-label="anchor" href="#tidy_samples-sample-predictions"></a>
 </h3>
-<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Single plate</span></span>
 <span><span class="va">s</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy_samples.html">tidy_samples</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span></span>
 <span></span>
@@ -1245,7 +1349,7 @@ both the single-plate and multiplate classes.</p>
 <h3 id="tidy_grid-precision-profiles">
 <code>tidy_grid()</code> — precision profiles<a class="anchor" aria-label="anchor" href="#tidy_grid-precision-profiles"></a>
 </h3>
-<div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Best-model grid for a single plate</span></span>
 <span><span class="va">g</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tidy_grid.html">tidy_grid</a></span><span class="op">(</span><span class="va">cr</span><span class="op">)</span></span>
 <span></span>
@@ -1264,7 +1368,7 @@ both the single-plate and multiplate classes.</p>
 <code>calibration_result_multiplate</code> object — a named list with
 <code>$meta</code> and <code>$plates</code>, where each element is a
 complete single-plate <code>calibration_result</code>.</p>
-<div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mp</span><span class="op">$</span><span class="va">plates</span><span class="op">[[</span><span class="st">"1"</span><span class="op">]</span><span class="op">]</span>   <span class="co"># a full calibration_result for curve_id 1</span></span>
 <span></span>
 <span><span class="co"># Global metadata</span></span>
@@ -1282,7 +1386,7 @@ complete single-plate <code>calibration_result</code>.</p>
 </h2>
 <p>When the same data has been fitted by both curveRfreq and
 curveRbayes, three comparison utilities are available:</p>
-<div class="sourceCode" id="cb26"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb27"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Merge prediction grids (columns prefixed by method name)</span></span>
 <span><span class="fu"><a href="../reference/compare_calibrations.html">compare_calibrations</a></span><span class="op">(</span><span class="va">cr_freq</span>, <span class="va">cr_bayes</span><span class="op">)</span></span>
 <span></span>
