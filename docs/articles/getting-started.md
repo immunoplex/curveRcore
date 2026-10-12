@@ -16,6 +16,12 @@ The three packages in the suite are:
   `fit_calibration_freq()` and `fit_calibration_freq_multiplate()`.
 - **curveRbayes** — Bayesian calibration via Stan.
 
+A fourth package, **curveRweights**, sits downstream of the fits: it
+turns each sample’s reported precision into observation weights for
+comparison analyses. This vignette introduces it, and the censoring
+labels the fits produce for out-of-range samples, in the two sections
+before the [Summary](#summary-section).
+
 Both fitting engines return the same `calibration_result` object, so all
 downstream code — plots, extractors, detection-limit functions — works
 identically regardless of which engine produced the result.
@@ -535,6 +541,8 @@ sample replicate:
 See [Out-of-range samples](#out-of-range-samples) for how these are
 computed and for the censoring columns added by
 [`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md).
+The [Censoring](#censoring) section below works through the classes and
+the analysis options.
 
 Any additional columns present in the original sample data (dilution,
 replicate number, patient ID, etc.) are carried through unchanged.
@@ -878,12 +886,285 @@ agreement_metrics(
 )
 ```
 
+## Censoring: samples outside the quantifiable range
+
+A back-calculated concentration is only as informative as the part of
+the curve it lands on. A response near the lower asymptote says “the
+concentration is small”, not *how* small; a response near the upper
+asymptote says “large”, with no upper bound. Treating those samples as
+ordinary numbers — or discarding them — biases every downstream summary,
+because *which* samples fall out of range depends on the thing you are
+trying to estimate. curveRcore therefore labels each sample with a
+**censoring class** and the **bounds** that class implies, so that
+censored-data methods can use the samples for what they do know.
+
+### Classes and bounds
+
+[`classify_censoring()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring.md)
+works from the response scale first, so a sample whose response lies
+beyond an asymptote — and which therefore has no finite point estimate —
+is still placed on the correct side.
+
+| `censor_class` | Meaning | `censor_type` | Bounds (natural, dilution-corrected) |
+|----|----|----|----|
+| `quantified` | Between the LLOQ and ULOQ | `none` | — (use `final_concentration`) |
+| `lod_to_lloq` | Above the lower LOD, below the LLOQ | `interval` | `[LOD, LLOQ] × dilution` |
+| `below_lod` | Response below the lower-LOD response | `left` | `[0, LOD] × dilution` |
+| `below_lloq` | Below the LLOQ and no LOD available | `left` | `[0, LLOQ] × dilution` |
+| `above_uloq` | Above the ULOQ | `right` | `(ULOQ, ∞) × dilution` |
+| `saturated` | Response at or above the upper-LOD response | `right` | `(ULOQ, ∞) × dilution` |
+| `no_response` | No usable response | `NA` | — |
+
+`censor_type` uses the codes that survival-analysis and
+censored-regression software expect, and `censor_lower` / `censor_upper`
+hold the bounds with `NA` meaning unbounded. The single-curve function
+is useful for seeing the rules at work; in a pipeline you call
+[`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md)
+on a fitted result instead.
+
+``` r
+# Illustrative numbers: a curve with asymptotes a = 1, d = 4 on the fitting
+# (log10 response) scale, LLOQ = 10^0.5 and ULOQ = 10^3 before dilution.
+smp <- data.frame(
+  label    = c("high", "mid", "just under LLOQ", "near the floor", "at the floor", "saturated"),
+  response = c(3.7, 2.4, 1.55, 1.25, 1.02, 3.995),
+  x_log10  = c(2.9, 1.5, 0.35, NA, NA, NA)
+)
+cc <- classify_censoring(
+  response = smp$response, x_log10 = smp$x_log10, dilution = 100,
+  lloq_log10 = 0.5, uloq_log10 = 3,
+  lod_response = 1.3, ulod_response = 3.8,
+  lod_log10 = 0.0, ulod_log10 = 3.4,
+  a = 1, d = 4
+)
+cbind(smp[, c("label", "response")], cc)
+#>             label response censor_class censor_type censor_lower censor_upper
+#> 1            high    3.700   quantified        none           NA           NA
+#> 2             mid    2.400   quantified        none           NA           NA
+#> 3 just under LLOQ    1.550  lod_to_lloq    interval        1e+02     316.2278
+#> 4  near the floor    1.250    below_lod        left           NA     100.0000
+#> 5    at the floor    1.020    below_lod        left           NA     100.0000
+#> 6       saturated    3.995    saturated       right        1e+05           NA
+```
+
+The samples with no `x_log10` have no finite estimate at all, yet each
+is placed on the correct side of the range.
+
+### Intervals and threshold probabilities
+
+Bounds say where a censored sample *must* lie; they do not say where it
+*most likely* lies inside that region, and for a quantified sample the
+symmetric `pcov` ignores that uncertainty is wider on one side. Both
+fitting engines therefore back-calculate every sample many times — once
+per posterior draw (curveRbayes) or per Monte Carlo draw of the fitted
+parameters plus residual noise (curveRfreq). A draw whose response falls
+beyond *that draw’s* asymptote is kept as `-Inf` (concentration 0) or
+`+Inf` (unbounded) rather than dropped, and
+[`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md)
+turns the draw matrix into the interval and probability columns of
+`$samples`:
+
+``` r
+set.seed(1)
+n_draw <- 2000
+# rows = samples, columns = draws; pre-dilution log10 concentration
+x <- rbind(
+  well_inside  = rnorm(n_draw, 1.5, 0.10),                              # comfortably quantified
+  near_floor   = rnorm(n_draw, 0.2, 0.60),                              # straddles the LLOQ
+  at_floor     = c(rep(-Inf, 1400), rnorm(n_draw - 1400, 0.1, 0.5)),    # 70% of draws beyond a
+  near_ceiling = c(rep( Inf,  300), rnorm(n_draw -  300, 2.9, 0.3))     # 15% beyond d
+)
+out <- summarize_conc_draws(x, dilution = 100, lloq_log10 = 0.5, uloq_log10 = 3,
+                            decision_cutoff = 50)
+cbind(sample = rownames(x), round(out, 3))
+#>         sample conc_q_lo conc_q_med conc_q_hi p_below_lloq p_above_uloq
+#> 1  well_inside  1950.795   3136.692  5043.193        0.000        0.000
+#> 2   near_floor     9.217    158.480  2532.980        0.679        0.000
+#> 3     at_floor     0.000      0.000   569.844        0.944        0.000
+#> 4 near_ceiling 21924.615  90287.755        NA        0.000        0.452
+#>   p_below_cutoff frac_draws_below_a frac_draws_above_d
+#> 1          0.000                0.0               0.00
+#> 2          0.202                0.0               0.00
+#> 3          0.766                0.7               0.00
+#> 4          0.000                0.0               0.15
+```
+
+Read across the rows. `at_floor` gets `conc_q_lo = 0` and a bounded
+upper quantile: it is almost certainly below the LLOQ (`p_below_lloq`),
+and it is *informative* for a threshold question such as “below 50?”
+(`p_below_cutoff`) even though its `pcov` would be capped at the
+maximum. `near_ceiling` gets `conc_q_hi = NA` because more than 2.5 % of
+its draws are unbounded above. `frac_draws_below_a` and
+`frac_draws_above_d` report how much of each sample’s predictive
+distribution the legacy `se_concentration` / `pcov` silently leave out;
+those two summaries are deliberately unchanged.
+
+### Analysing censored samples
+
+Put the bounds on a log10 scale once, in the `Surv(type = "interval2")`
+convention (`y_lo == y_hi` for an exact value, `NA` for an unbounded
+side):
+
+``` r
+as_interval2 <- function(s) {
+  y <- log10(s$final_concentration)
+  lo <- ifelse(s$censor_type %in% c("interval", "right"), log10(s$censor_lower), NA_real_)
+  hi <- ifelse(s$censor_type %in% c("left", "interval"),  log10(s$censor_upper), NA_real_)
+  none <- s$censor_type %in% "none"
+  lo[none] <- y[none]; hi[none] <- y[none]
+  cbind(s, y_lo = lo, y_hi = hi)
+}
+```
+
+The cost of ignoring the censoring is easy to see on simulated data.
+Below, about a third of a group’s true values lie under the
+quantification limit:
+
+``` r
+set.seed(42)
+n    <- 400
+true <- rnorm(n, mean = 0.6, sd = 0.7)          # log10 concentration; truth: mean 0.6
+lloq <- 0.3
+cens <- true < lloq
+sim  <- data.frame(
+  final_concentration = ifelse(cens, 10^lloq / 2, 10^true),   # LLOQ/2 stand-in when censored
+  censor_type  = ifelse(cens, "left", "none"),
+  censor_lower = NA_real_,
+  censor_upper = ifelse(cens, 10^lloq, NA_real_)
+)
+sim <- as_interval2(sim)
+
+tob <- survival::survreg(survival::Surv(y_lo, y_hi, type = "interval2") ~ 1,
+                         data = sim, dist = "gaussian")
+c(truth                  = 0.6,
+  complete_case          = mean(log10(sim$final_concentration[!cens])),
+  substitute_LLOQ_over_2 = mean(log10(sim$final_concentration)),
+  censored_likelihood    = unname(coef(tob)))
+#>                  truth          complete_case substitute_LLOQ_over_2 
+#>              0.6000000              0.9491793              0.6403612 
+#>    censored_likelihood 
+#>              0.5954241
+```
+
+Dropping the censored rows overstates the mean; substitution errs by an
+amount that depends on the arbitrary fraction chosen and understates the
+variance. The censored-likelihood (Tobit) estimate recovers the truth.
+For regression models, repeated measures, Bayesian likelihoods,
+survival-style nonparametrics and threshold classification, see
+[`vignette("analysing-ispi-exports", package = "curveR")`](https://immunoplex.github.io/curveR/articles/analysing-ispi-exports.html).
+
+------------------------------------------------------------------------
+
+## Precision weights with curveRweights
+
+Censoring deals with samples the curve cannot measure. A separate
+problem affects the samples it *can* measure: their precision is not
+constant. `pcov` and `se_concentration` follow a U-shaped profile along
+the curve — small in the middle, large near both asymptotes — so a plain
+average or regression treats a noisy sample and a sharp one as equally
+trustworthy.
+
+**curveRweights** converts that profile into **continuous observation
+weights**. It does not use `1 / se^2` directly, because the delta-method
+standard error is a model-based prediction and is not guaranteed to be
+calibrated against the scatter you actually see between samples. Instead
+it estimates, from your data, how residual variance relates to the
+reported precision:
+
+``` math
+ \sigma_i = \phi \cdot s_i^{\beta_1}, \qquad w_i = 1 / \sigma_i^2 
+```
+
+where $`s_i`$ is `se_concentration` (or `pcov`) for sample *i*. The
+location model is a **saturated cell-means** model (one mean per design
+cell, e.g. arm × timepoint), so any structure in the means is absorbed
+there and cannot leak into the scale estimate.
+
+| Estimate | Reads as |
+|----|----|
+| $`\phi \approx 1`$, $`\beta_1 \approx 1`$ | The curve’s reported precision is about right |
+| $`\phi > 1`$ | Extra variance beyond measurement error (biology, plate effects) |
+| $`\beta_1 < 1`$ | Weights are flatter than the reported precision suggests |
+| $`\beta_1 > 1`$ | Reported precision differences are amplified in the data |
+
+``` r
+# What the weight model implies, for illustrative values of (phi, beta1)
+se <- 10^seq(-1.3, 0.1, length.out = 100)
+prof <- sapply(list(delta_method = c(1, 1), flatter = c(1.2, 0.6), steeper = c(1.8, 1.9)),
+               function(p) 1 / (p[1] * se^p[2])^2)
+prof <- prof / apply(prof, 2, max)            # compare shapes on a common scale
+matplot(se, prof, type = "l", lty = 1, lwd = 2, log = "xy",
+        xlab = "se_concentration (log10 SD)", ylab = "relative weight")
+legend("topright", legend = colnames(prof), col = 1:3, lty = 1, lwd = 2, bty = "n")
+```
+
+![](getting-started_files/figure-html/weights-profile-1.png)
+
+### The workflow
+
+curveRweights builds on curveRcore (it imports it) and needs `brms` and
+a Stan backend, so this vignette shows the calls rather than running
+them. Three things matter:
+
+1.  **Design columns ride along.** The factors that define your
+    comparison cells must be columns on the `samples` you give the
+    fitting function; the fitters carry them through into `$samples`.
+2.  **Weights are estimated once, from the whole batch**, then reused.
+3.  **Weights apply to test samples**, not to standards.
+
+``` r
+library(curveRweights)
+
+# 1. Fit curves as usual (samples must carry timeperiod and cohort_arm)
+mp <- curveRfreq::fit_calibration_freq_multiplate(
+  standards = std_preprocessed, samples = samples_with_design,
+  response_var = "mfi", is_log_response = TRUE, is_log_independent = TRUE
+)
+mp <- compute_detection_limits_multiplate(mp)
+mp <- classify_pcov_gates_multiplate(mp)
+mp <- classify_censoring_multiplate(mp)
+
+# 2. Weight-input frame -> estimate (phi, beta1) -> inspect
+wd <- as_weight_data(mp, design = c("timeperiod", "cohort_arm"))
+pw <- fit_precision_weights(wd)
+pw                                   # phi, beta1 with intervals and a plain-language regime
+weight_diagnostics(pw)
+
+# 3. Attach weights to the sample table, or evaluate them on the precision grid
+samples_w <- join_weights(tidy_samples(mp), pw)
+profile   <- predict_weights(pw, newdata = mp)
+```
+
+`w` is the raw inverse-variance weight and `w_norm` is rescaled so
+weighted and unweighted estimates share a scale. For data that did not
+come from a curveR fit, the standalone path
+([`prepare_cv()`](https://immunoplex.github.io/curveRweights/reference/prepare_cv.html)
+→
+[`diagnose_cv()`](https://immunoplex.github.io/curveRweights/reference/diagnose_cv.html)
+→
+[`fit_saturated_weight_batch()`](https://immunoplex.github.io/curveRweights/reference/fit_saturated_weight_batch.html))
+estimates the same model; see
+[`vignette("precision-weighting", package = "curveRweights")`](https://immunoplex.github.io/curveRweights/articles/precision-weighting.html).
+
+### Weights and censoring are different tools
+
+Weights describe how noisy a *measured* sample is; they do not say what
+to do with a sample that is out of range. Inverse-variance weighting
+down-weights exactly the samples whose precision is poor because their
+concentration is low or high, so weighted means drift towards the middle
+of the curve. Use the weights for `quantified` samples and represent
+out-of-range samples by their censoring bounds (previous section). The
+worked demonstration, and the way to combine the two, are in the
+curveRweights vignette
+[`vignette("precision-weighting", package = "curveRweights")`](https://immunoplex.github.io/curveRweights/articles/precision-weighting.html),
+section “Weights and censored samples”.
+
 ------------------------------------------------------------------------
 
 ## Summary
 
 curveRcore provides six interconnected layers shared by all fitting
-engines:
+engines, and two follow-on analyses that build on them:
 
 1.  **Datasets** — `bead_assay_example` (Luminex) and
     `elisa_assay_example` (ELISA) for testing and documentation.
@@ -915,3 +1196,15 @@ engines:
     [`tidy_grid()`](https://immunoplex.github.io/curveRcore/reference/tidy_grid.md);
     pcov / SE conversion utilities; detection-limit functions; and
     cross-method comparison helpers.
+
+7.  **Censoring** —
+    [`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md)
+    labels samples that fall outside the quantifiable range
+    (`censor_class`, `censor_type`, bounds), and
+    [`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md)
+    gives asymmetric intervals and threshold probabilities that keep
+    out-of-range draws as censored.
+
+8.  **Precision weights** — curveRweights estimates observation weights
+    from the precision profile for in-range samples; out-of-range
+    samples are represented by their censoring bounds instead.

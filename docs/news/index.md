@@ -1,6 +1,42 @@
 # Changelog
 
-## curveRcore 0.5.0
+## curveRcore 0.5.2
+
+### Documentation
+
+- [`vignette("getting-started")`](https://immunoplex.github.io/curveRcore/articles/getting-started.md)
+  gains a **Censoring** section (classes, bounds,
+  [`classify_censoring()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring.md),
+  [`summarize_conc_draws()`](https://immunoplex.github.io/curveRcore/reference/summarize_conc_draws.md),
+  and why censored samples should not be dropped or substituted) and a
+  **Precision weights with curveRweights** section (the weight model,
+  the workflow, and why weights and censoring are separate tools). The
+  ecosystem overview now includes curveRweights.
+
+## curveRcore 0.5.1
+
+### Fixed analytic inverse-curve gradients (delta-method SEs)
+
+- [`grad_logistic5()`](https://immunoplex.github.io/curveRcore/reference/grad_logistic5.md)
+  and
+  [`grad_gompertz4()`](https://immunoplex.github.io/curveRcore/reference/grad_gompertz4.md):
+  dx/da was set equal to (minus) dx/dy, missing the (d - a) dependence
+  of the inverse;
+  [`grad_logistic5()`](https://immunoplex.github.io/curveRcore/reference/grad_logistic5.md)
+  also returned dx/dy with the wrong sign.
+- [`grad_loglogistic5()`](https://immunoplex.github.io/curveRcore/reference/grad_loglogistic5.md):
+  dx/da, dx/dd and dx/dg corrected;
+  [`grad_loglogistic4()`](https://immunoplex.github.io/curveRcore/reference/grad_loglogistic4.md)
+  and `grad_inv_loglogistic4_fixed()`: dx/dd sign corrected;
+  `grad_inv_loglogistic5_fixed()`: sign of the 1/g term of dx/dg
+  corrected.
+- These feed the delta-method sample SEs in curveRfreq; NLS 5PL,
+  Gompertz and log-logistic SEs (and CV-based reportability, coverage
+  and any precision-profile gate) computed with earlier versions are
+  affected. 4PL is unaffected.
+- New tests check every analytic gradient, including `grad_y_*_fixed()`,
+  against finite differences of the inverse functions at several
+  parameter sets (including g \> 1). \# curveRcore 0.5.0
 
 ### Out-of-range test samples: censoring, asymmetric intervals, threshold probabilities
 
@@ -78,7 +114,8 @@
   loop over `$plates` directly), so this only affects callers of
   [`tidy_samples()`](https://immunoplex.github.io/curveRcore/reference/tidy_samples.md)/[`tidy_grid()`](https://immunoplex.github.io/curveRcore/reference/tidy_grid.md)/[`tidy_hyperparam()`](https://immunoplex.github.io/curveRcore/reference/tidy_hyperparam.md)/
   [`tidy_fit_diag()`](https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.md)
-  themselves — notably curveRweights’ `as_weight_data()`.
+  themselves — notably curveRweights’
+  [`as_weight_data()`](https://immunoplex.github.io/curveRweights/reference/as_weight_data.html).
 
 ## curveRcore 0.4.2
 

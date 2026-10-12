@@ -1,3 +1,13 @@
+# curveRcore 0.5.2
+
+## Documentation
+
+* `vignette("getting-started")` gains a **Censoring** section (classes, bounds,
+  `classify_censoring()`, `summarize_conc_draws()`, and why censored samples
+  should not be dropped or substituted) and a **Precision weights with
+  curveRweights** section (the weight model, the workflow, and why weights and
+  censoring are separate tools). The ecosystem overview now includes curveRweights.
+
 # curveRcore 0.5.1
 
 ## Fixed analytic inverse-curve gradients (delta-method SEs)
