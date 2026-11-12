@@ -293,6 +293,96 @@ CREATE TABLE IF NOT EXISTS madi_results.calib_samples (
 
 
 -- ============================================================================
+-- Precision weights (curveRweights) — per-sample weights + per-group fit
+--
+-- calib_weights / calib_weights_fit were created by i-spi-compute migration 004
+-- and transcribed here VERBATIM from the live DB (14 and 18 columns, live order;
+-- agroup is last on calib_weights because it was added after creation).
+-- Keys are UNCHANGED by the 0.6.0 extension: calib_weights shares calib_samples'
+-- sample hierarchy (curve_id, method, sampleid, patientid, timeperiod, dilution);
+-- calib_weights_fit is one row per (multiplate_group_id, method). There is ONE
+-- weight set per (sample, method); `model` records which model produced it.
+-- See calib_weights_SPEC.md and weights_contract().
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS madi_results.calib_weights (
+    curve_id bigint NOT NULL,
+    method text NOT NULL,
+    sampleid character varying(128) NOT NULL,
+    patientid character varying(128) NOT NULL DEFAULT '__none__'::character varying,
+    timeperiod character varying(64) NOT NULL DEFAULT '__none__'::character varying,
+    dilution character varying(64) NOT NULL DEFAULT '__none__'::character varying,
+    se double precision,
+    pcov double precision,
+    sigma double precision,
+    w double precision,
+    w_norm double precision,
+    job_id character varying(64),
+    created_at timestamp with time zone DEFAULT now(),
+    agroup character varying(40),
+    CONSTRAINT calib_weights_pkey PRIMARY KEY (curve_id, method, sampleid, patientid, timeperiod, dilution),
+    CONSTRAINT calib_weights_curve_id_fkey FOREIGN KEY (curve_id) REFERENCES madi_results.curve_lookup(curve_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_calib_weights_patient
+    ON madi_results.calib_weights USING btree (curve_id, patientid);
+
+CREATE TABLE IF NOT EXISTS madi_results.calib_weights_fit (
+    multiplate_group_id uuid NOT NULL,
+    method text NOT NULL,
+    antigen character varying(64),
+    feature character varying(15),
+    design_cols text,
+    scale_predictor text,
+    phi double precision,
+    phi_lo double precision,
+    phi_hi double precision,
+    beta1 double precision,
+    beta1_lo double precision,
+    beta1_hi double precision,
+    interpretation text,
+    n_fit integer,
+    n_eff double precision,
+    weight_ratio double precision,
+    job_id character varying(64),
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT calib_weights_fit_pkey PRIMARY KEY (multiplate_group_id, method)
+);
+
+-- 0.6.0 extension: record the model and the concepts the additive
+-- measurement-error model adds. All new columns are nullable (NULL = not
+-- applicable to the model that wrote the row) except `model`, which defaults to
+-- the model every pre-0.6.0 row used. ADD COLUMN IF NOT EXISTS makes this safe to
+-- re-run against the live DB; on a fresh DB it yields the same column order.
+-- No CHECK on `model` (family convention); validated by weights_contract().
+ALTER TABLE madi_results.calib_weights
+    ADD COLUMN IF NOT EXISTS model text NOT NULL DEFAULT 'multiplicative',
+    ADD COLUMN IF NOT EXISTS weights_pkg_version character varying(32),
+    ADD COLUMN IF NOT EXISTS v_meas double precision,
+    ADD COLUMN IF NOT EXISTS tau2 double precision,
+    ADD COLUMN IF NOT EXISTS reliability double precision,
+    ADD COLUMN IF NOT EXISTS reliability_lo double precision,
+    ADD COLUMN IF NOT EXISTS reliability_hi double precision,
+    ADD COLUMN IF NOT EXISTS censor_type text CHECK (censor_type IN ('none','left','interval','right')),
+    ADD COLUMN IF NOT EXISTS bound double precision;
+
+ALTER TABLE madi_results.calib_weights_fit
+    ADD COLUMN IF NOT EXISTS model text NOT NULL DEFAULT 'multiplicative',
+    ADD COLUMN IF NOT EXISTS weights_pkg_version character varying(32),
+    ADD COLUMN IF NOT EXISTS tau double precision,
+    ADD COLUMN IF NOT EXISTS tau_lo double precision,
+    ADD COLUMN IF NOT EXISTS tau_hi double precision,
+    ADD COLUMN IF NOT EXISTS kappa double precision,
+    ADD COLUMN IF NOT EXISTS kappa_lo double precision,
+    ADD COLUMN IF NOT EXISTS kappa_hi double precision,
+    ADD COLUMN IF NOT EXISTS reliability double precision,
+    ADD COLUMN IF NOT EXISTS reliability_lo double precision,
+    ADD COLUMN IF NOT EXISTS reliability_hi double precision,
+    ADD COLUMN IF NOT EXISTS fix_beta1 boolean,
+    ADD COLUMN IF NOT EXISTS n_censored integer,
+    ADD COLUMN IF NOT EXISTS identifiability text;
+
+
+-- ============================================================================
 -- Children with NO FK (input echoes; keyed by curve/method/well)
 -- ============================================================================
 

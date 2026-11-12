@@ -76,6 +76,12 @@ reference:
   - tidy_draws
   - tidy_fit_diag
 
+- title: Precision-weight data contract
+  desc: Column-level definition of the calib_weights and calib_weights_fit tables.
+  contents:
+  - weights_contract
+  - validate_weights_table
+
 - title: Eligibility & Selection
   desc: Model gating and best-model selection.
   contents:
