@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.6.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,16 @@
       <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.0" id="curvercore-060">curveRcore 0.6.0<a class="anchor" aria-label="anchor" href="#curvercore-060"></a></h2>
+<div class="section level3">
+<h3 id="data-contract-precision-weight-tables-0-6-0">Data contract: precision-weight tables<a class="anchor" aria-label="anchor" href="#data-contract-precision-weight-tables-0-6-0"></a></h3>
+<ul><li>
+<code>R/calib_schema.sql</code> now defines <code>calib_weights</code> (per sample) and <code>calib_weights_fit</code> (per multiplate group), transcribed verbatim from the live DB. They were created by i-spi-compute migration 004 and were missing from the contract.</li>
+<li>Both tables are extended so one table holds the weights from either model, with keys unchanged (same sample hierarchy as <code>calib_samples</code>): a <code>model</code> column (default <code>multiplicative</code>, the model of every earlier row), <code>weights_pkg_version</code>, and the fields of the additive measurement-error model (per sample: <code>v_meas</code>, <code>tau2</code>, <code>reliability</code> with interval, <code>censor_type</code>, <code>bound</code>; per fit: <code>tau</code>, <code>kappa</code>, <code>reliability</code>, <code>fix_beta1</code>, <code>n_censored</code>, <code>identifiability</code>, with intervals). All new columns are nullable, so existing rows stay valid. The additions are idempotent <code>ADD COLUMN IF NOT EXISTS</code> statements. Design: <code>calib_weights_SPEC.md</code>.</li>
+<li>New <code><a href="../reference/weights_contract.html">weights_contract()</a></code> returns the column-level definition (type, key, which model a column applies to, description); new <code><a href="../reference/validate_weights_table.html">validate_weights_table()</a></code> checks rows against it before they are written. A test keeps the DDL and the contract in sync.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.2" id="curvercore-052">curveRcore 0.5.2<a class="anchor" aria-label="anchor" href="#curvercore-052"></a></h2>
 <div class="section level3">

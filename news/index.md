@@ -1,5 +1,31 @@
 # Changelog
 
+## curveRcore 0.6.0
+
+### Data contract: precision-weight tables
+
+- `R/calib_schema.sql` now defines `calib_weights` (per sample) and
+  `calib_weights_fit` (per multiplate group), transcribed verbatim from
+  the live DB. They were created by i-spi-compute migration 004 and were
+  missing from the contract.
+- Both tables are extended so one table holds the weights from either
+  model, with keys unchanged (same sample hierarchy as `calib_samples`):
+  a `model` column (default `multiplicative`, the model of every earlier
+  row), `weights_pkg_version`, and the fields of the additive
+  measurement-error model (per sample: `v_meas`, `tau2`, `reliability`
+  with interval, `censor_type`, `bound`; per fit: `tau`, `kappa`,
+  `reliability`, `fix_beta1`, `n_censored`, `identifiability`, with
+  intervals). All new columns are nullable, so existing rows stay valid.
+  The additions are idempotent `ADD COLUMN IF NOT EXISTS` statements.
+  Design: `calib_weights_SPEC.md`.
+- New
+  [`weights_contract()`](https://immunoplex.github.io/curveRcore/reference/weights_contract.md)
+  returns the column-level definition (type, key, which model a column
+  applies to, description); new
+  [`validate_weights_table()`](https://immunoplex.github.io/curveRcore/reference/validate_weights_table.md)
+  checks rows against it before they are written. A test keeps the DDL
+  and the contract in sync.
+
 ## curveRcore 0.5.2
 
 ### Documentation

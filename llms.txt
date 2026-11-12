@@ -391,6 +391,16 @@ Broom-style helpers for extracting tabular data.
 - [`tidy_fit_diag()`](https://immunoplex.github.io/curveRcore/reference/tidy_fit_diag.md)
   : Tidy the per-fit diagnostics from a calibration result
 
+## Precision-weight data contract
+
+Column-level definition of the calib_weights and calib_weights_fit
+tables.
+
+- [`weights_contract()`](https://immunoplex.github.io/curveRcore/reference/weights_contract.md)
+  : Data contract for the precision-weight tables
+- [`validate_weights_table()`](https://immunoplex.github.io/curveRcore/reference/validate_weights_table.md)
+  : Check rows against the weights contract before writing them
+
 ## Eligibility & Selection
 
 Model gating and best-model selection.
