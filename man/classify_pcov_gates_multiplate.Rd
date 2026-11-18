@@ -18,7 +18,10 @@ The same class of object, with \code{pcov_pass}/\code{pcov_gate_class}
 Call this AFTER fit_calibration_freq()/fit_calibration_bayes() and AFTER
 compute_detection_limits_multiplate() -- typically the very next line in
 the worker pipeline. Overwrites \code{cr$grid$pcov_pass} and
-\code{cr$samples$pcov_pass} for every curve, and adds \code{cr$samples$ pcov_gate_class}. \code{calib_grid} intentionally gets NO gate_class column
+\code{cr$samples$pcov_pass} for every curve, and adds \code{cr$samples$ pcov_gate_class}. From 0.7.0 the same is done for \code{cr$controls} and
+\code{cr$standard_estimates} when a curve carries them (control wells and
+back-calculated standards; see \code{\link[=point_estimates_contract]{point_estimates_contract()}}).
+\code{calib_grid} intentionally gets NO gate_class column
 (grid pcov_pass is recomputed for display symmetry only; it plays no role
 in deriving LLOQ/ULOQ, which happens upstream from the raw pcov profile
 before this function ever runs, so there is no circularity).

@@ -11,3 +11,4 @@
 ^\.github$
 ^doc$
 ^docs$
+^[A-Za-z_]+_SPEC\.md$

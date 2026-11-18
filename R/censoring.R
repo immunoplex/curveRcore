@@ -137,7 +137,9 @@ classify_censoring <- function(response, x_log10, dilution,
 #' [classify_pcov_gates_multiplate()] -- the first point at which LODs,
 #' LLOQ/ULOQ and samples all exist on the result. Adds `censor_class`,
 #' `censor_type`, `censor_lower` and `censor_upper` to `cr$samples` for every
-#' curve (all `NA` for a curve with no selected model).
+#' curve (all `NA` for a curve with no selected model). From 0.7.0 the same
+#' columns are added to `cr$controls` and `cr$standard_estimates` when a curve
+#' carries them.
 #'
 #' @param mp A `calibration_result` or `calibration_result_multiplate`.
 #' @return The same class of object with the censoring columns added.
@@ -155,16 +157,21 @@ classify_censoring_multiplate <- function(mp) {
                                     censor_upper = rep(NA_real_, n),
                                     stringsAsFactors = FALSE)
 
+  has_rows <- function(x) !is.null(x) && is.data.frame(x) && nrow(x) > 0
+
   for (cid in names(plates)) {
     cr <- plates[[cid]]
-    if (is.null(cr) || is.null(cr$samples) || !is.data.frame(cr$samples) ||
-        !nrow(cr$samples)) next
-    s <- cr$samples
+    if (is.null(cr)) next
+    slots <- Filter(function(sl) has_rows(cr[[sl]]), .POINT_SLOTS)
+    if (!length(slots)) next
 
     best <- cr$selection$best_model_name %||% NA_character_
     ens  <- if (!is.na(best)) cr$ensemble[[best]] else NULL
     if (is.null(ens)) {
-      cr$samples <- cbind(s[setdiff(names(s), cens_names)], na_cols(nrow(s)))
+      for (sl in slots) {
+        s <- cr[[sl]]
+        cr[[sl]] <- cbind(s[setdiff(names(s), cens_names)], na_cols(nrow(s)))
+      }
       plates[[cid]] <- cr
       next
     }
@@ -176,19 +183,22 @@ classify_censoring_multiplate <- function(mp) {
     par  <- function(nm) if (!is.null(est) && nm %in% names(est)) as.numeric(est[[nm]]) else NA_real_
     a_hat <- if (is.finite(par("a"))) par("a") else (cr$meta$fixed_a %||% NA_real_)
 
-    cc <- classify_censoring(
-      response      = s$observed_response_fit %||% rep(NA_real_, nrow(s)),
-      x_log10       = s$predicted_log10_concentration %||% rep(NA_real_, nrow(s)),
-      dilution      = s$dilution %||% 1,
-      lloq_log10    = eb$lloq %||% NA_real_,
-      uloq_log10    = eb$uloq %||% NA_real_,
-      lod_response  = lods$lower_lod_response %||% NA_real_,
-      ulod_response = lods$upper_lod_response %||% NA_real_,
-      lod_log10     = lods$lower_lod_log10_conc %||% NA_real_,
-      ulod_log10    = lods$upper_lod_log10_conc %||% NA_real_,
-      a = a_hat, d = par("d"))
-
-    cr$samples <- cbind(s[setdiff(names(s), names(cc))], cc)
+    # Test samples, and (0.7.0) controls and standard estimates when present.
+    for (sl in slots) {
+      s <- cr[[sl]]
+      cc <- classify_censoring(
+        response      = s$observed_response_fit %||% rep(NA_real_, nrow(s)),
+        x_log10       = s$predicted_log10_concentration %||% rep(NA_real_, nrow(s)),
+        dilution      = s$dilution %||% 1,
+        lloq_log10    = eb$lloq %||% NA_real_,
+        uloq_log10    = eb$uloq %||% NA_real_,
+        lod_response  = lods$lower_lod_response %||% NA_real_,
+        ulod_response = lods$upper_lod_response %||% NA_real_,
+        lod_log10     = lods$lower_lod_log10_conc %||% NA_real_,
+        ulod_log10    = lods$upper_lod_log10_conc %||% NA_real_,
+        a = a_hat, d = par("d"))
+      cr[[sl]] <- cbind(s[setdiff(names(s), names(cc))], cc)
+    }
     plates[[cid]] <- cr
   }
 

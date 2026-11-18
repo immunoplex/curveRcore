@@ -1,5 +1,90 @@
 # Changelog
 
+## curveRcore 0.7.0
+
+### Data contract: estimates and expected values for controls and calibrators
+
+- New table `calib_controls` in `R/calib_schema.sql`: one row per
+  control well, curve and method, with the same modelled estimates
+  `calib_samples` holds for test samples (back-calculated concentration,
+  pcov, precision gate, censoring, draw quantiles and probabilities),
+  plus the control’s `source` (its name, e.g. `QC1 (Low)`), `included` /
+  `exclusion_reason` / `mask_reason` (masked controls are estimated too)
+  and the response columns.
+- `calib_standards` gains the same estimate columns, plus `recovery_pct`
+  (estimated / nominal, %), as nullable `ADD COLUMN IF NOT EXISTS`
+  additions. For standards `pcov_rmse` includes the bias against the
+  nominal value. The key and the existing columns are unchanged.
+- New table `control_reference` (expected values of controls, with
+  acceptance limits, SD, lot, basis and validity period; owned by I-SPI)
+  and view `calib_controls_qc` (each control estimate with the value in
+  force on its run date: recovery, z-score, within limits).
+- New
+  [`point_estimates_contract()`](https://immunoplex.github.io/curveRcore/reference/point_estimates_contract.md)
+  and
+  [`validate_point_estimates()`](https://immunoplex.github.io/curveRcore/reference/validate_point_estimates.md)
+  for the three tables; a test keeps the DDL and the contract in sync.
+- New
+  [`standard_recovery()`](https://immunoplex.github.io/curveRcore/reference/standard_recovery.md)
+  and
+  [`add_standard_recovery_multiplate()`](https://immunoplex.github.io/curveRcore/reference/add_standard_recovery_multiplate.md).
+- New
+  [`estimate_points_from_stored()`](https://immunoplex.github.io/curveRcore/reference/estimate_points_from_stored.md):
+  back-calculates controls or standards from a stored fit (parameters,
+  precision profile, limits, draws) without refitting. Used once to fill
+  the new columns for curves fitted before 0.7.0. Checked against
+  curveRfreq and curveRbayes (see `calib_points_SPEC.md`).
+- [`classify_pcov_gates_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_pcov_gates_multiplate.md)
+  and
+  [`classify_censoring_multiplate()`](https://immunoplex.github.io/curveRcore/reference/classify_censoring_multiplate.md)
+  now also process `$controls` and `$standard_estimates` on each curve’s
+  result when present. Results without them are handled exactly as
+  before.
+
+### Release manifest
+
+- New table `schema_version`; applying `calib_schema.sql` records
+  `calib_schema` 0.7.0. New
+  [`calib_schema_version()`](https://immunoplex.github.io/curveRcore/reference/calib_schema_version.md).
+- `calib_run` gains `manifest` (jsonb): the composite release manifest a
+  job ran under. New
+  [`release_manifest()`](https://immunoplex.github.io/curveRcore/reference/release_manifest.md)
+  (R, curveR packages, CmdStan, calib schema, renv lock hash, plus the
+  caller’s component, version and commit) and
+  [`manifest_json()`](https://immunoplex.github.io/curveRcore/reference/manifest_json.md).
+
+### Other
+
+- `calib_schema.sql` no longer names a personal database role in its
+  comments.
+- Design: `calib_points_SPEC.md`.
+
+## curveRcore 0.6.0
+
+### Data contract: precision-weight tables
+
+- `R/calib_schema.sql` now defines `calib_weights` (per sample) and
+  `calib_weights_fit` (per multiplate group), transcribed verbatim from
+  the live DB. They were created by i-spi-compute migration 004 and were
+  missing from the contract.
+- Both tables are extended so one table holds the weights from either
+  model, with keys unchanged (same sample hierarchy as `calib_samples`):
+  a `model` column (default `multiplicative`, the model of every earlier
+  row), `weights_pkg_version`, and the fields of the additive
+  measurement-error model (per sample: `v_meas`, `tau2`, `reliability`
+  with interval, `censor_type`, `bound`; per fit: `tau`, `kappa`,
+  `reliability`, `fix_beta1`, `n_censored`, `identifiability`, with
+  intervals). All new columns are nullable, so existing rows stay valid.
+  The additions are idempotent `ADD COLUMN IF NOT EXISTS` statements.
+  Design: `calib_weights_SPEC.md`.
+- New
+  [`weights_contract()`](https://immunoplex.github.io/curveRcore/reference/weights_contract.md)
+  returns the column-level definition (type, key, which model a column
+  applies to, description); new
+  [`validate_weights_table()`](https://immunoplex.github.io/curveRcore/reference/validate_weights_table.md)
+  checks rows against it before they are written. A test keeps the DDL
+  and the contract in sync.
+
 ## curveRcore 0.5.2
 
 ### Documentation

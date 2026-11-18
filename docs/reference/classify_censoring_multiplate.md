@@ -7,7 +7,8 @@ and
 – the first point at which LODs, LLOQ/ULOQ and samples all exist on the
 result. Adds `censor_class`, `censor_type`, `censor_lower` and
 `censor_upper` to `cr$samples` for every curve (all `NA` for a curve
-with no selected model).
+with no selected model). From 0.7.0 the same columns are added to
+`cr$controls` and `cr$standard_estimates` when a curve carries them.
 
 ## Usage
 

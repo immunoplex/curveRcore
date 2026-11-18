@@ -1,3 +1,8 @@
+# Result slots holding back-calculated points: test samples, and from 0.7.0
+# control wells and standard (calibrator) estimates. Gating and censoring treat
+# all three identically.
+.POINT_SLOTS <- c("samples", "controls", "standard_estimates")
+
 # =============================================================================
 # pcov_gates.R -- Unified LLOQ/ULOQ-aware pcov_pass + pcov_gate_class
 #
@@ -135,7 +140,10 @@ classify_pcov_gate <- function(x_log10, pcov, pcov_threshold,
 #' compute_detection_limits_multiplate() -- typically the very next line in
 #' the worker pipeline. Overwrites `cr$grid$pcov_pass` and
 #' `cr$samples$pcov_pass` for every curve, and adds `cr$samples$
-#' pcov_gate_class`. `calib_grid` intentionally gets NO gate_class column
+#' pcov_gate_class`. From 0.7.0 the same is done for `cr$controls` and
+#' `cr$standard_estimates` when a curve carries them (control wells and
+#' back-calculated standards; see [point_estimates_contract()]).
+#' `calib_grid` intentionally gets NO gate_class column
 #' (grid pcov_pass is recomputed for display symmetry only; it plays no role
 #' in deriving LLOQ/ULOQ, which happens upstream from the raw pcov profile
 #' before this function ever runs, so there is no circularity).
@@ -191,17 +199,21 @@ classify_pcov_gates_multiplate <- function(mp) {
       cr$grid$pcov_pass <- g$pcov_pass
     }
 
-    # ---- samples: pcov_pass + pcov_gate_class ------------------------------
-    if (!is.null(cr$samples) && is.data.frame(cr$samples) && nrow(cr$samples) > 0) {
+    # ---- back-calculated points: pcov_pass + pcov_gate_class --------------
+    # Test samples, and (0.7.0) controls and standard estimates when present.
+    for (slot in .POINT_SLOTS) {
+      pts <- cr[[slot]]
+      if (is.null(pts) || !is.data.frame(pts) || nrow(pts) == 0) next
       s <- classify_pcov_gate(
-        x_log10        = cr$samples$predicted_log10_concentration,
-        pcov           = cr$samples$pcov,
+        x_log10        = pts$predicted_log10_concentration %||% rep(NA_real_, nrow(pts)),
+        pcov           = pts$pcov %||% rep(NA_real_, nrow(pts)),
         pcov_threshold = pcov_threshold,
         lloq_log10     = lloq_log10, uloq_log10 = uloq_log10,
         inflect_x      = infl$x %||% NA_real_
       )
-      cr$samples$pcov_pass       <- s$pcov_pass
-      cr$samples$pcov_gate_class <- as.character(s$pcov_gate_class)
+      pts$pcov_pass       <- s$pcov_pass
+      pts$pcov_gate_class <- as.character(s$pcov_gate_class)
+      cr[[slot]] <- pts
     }
 
     plates[[cid]] <- cr
