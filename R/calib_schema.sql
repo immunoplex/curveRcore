@@ -383,7 +383,8 @@ ALTER TABLE madi_results.calib_weights_fit
 
 
 -- ============================================================================
--- Children with NO FK (input echoes; keyed by curve/method/well)
+-- Point sets: standards and blanks (input echoes, NO FK; keyed by
+-- curve/method/well) and, from 0.7.0, controls (FK to curve_lookup)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS madi_results.calib_standards (
@@ -402,6 +403,83 @@ CREATE TABLE IF NOT EXISTS madi_results.calib_standards (
     mask_reason character varying,
     CONSTRAINT calib_standards_pkey PRIMARY KEY (curve_id, method, well, dilution)
 );
+
+-- 0.7.0 extension: modelled estimates for each calibrator, the same columns
+-- calib_samples holds for test samples, plus recovery_pct (standards know their
+-- nominal value; pcov_rmse here includes the bias against it). All nullable:
+-- rows written before 0.7.0 keep NULL estimates until the curve is refitted.
+-- See calib_points_SPEC.md and point_estimates_contract().
+ALTER TABLE madi_results.calib_standards
+    ADD COLUMN IF NOT EXISTS predicted_concentration numeric,
+    ADD COLUMN IF NOT EXISTS predicted_log10_concentration numeric,
+    ADD COLUMN IF NOT EXISTS final_concentration numeric,
+    ADD COLUMN IF NOT EXISTS se_concentration numeric,
+    ADD COLUMN IF NOT EXISTS pcov numeric,
+    ADD COLUMN IF NOT EXISTS pcov_rmse numeric,
+    ADD COLUMN IF NOT EXISTS pcov_pass boolean,
+    ADD COLUMN IF NOT EXISTS pcov_gate_class text CHECK (pcov_gate_class IN ('belowLLOQ','inDynamicRange','aboveULOQ')),
+    ADD COLUMN IF NOT EXISTS censor_class text CHECK (censor_class IN ('quantified','lod_to_lloq','below_lod',
+                                                                       'below_lloq','above_uloq','saturated','no_response')),
+    ADD COLUMN IF NOT EXISTS censor_type text CHECK (censor_type IN ('none','left','interval','right')),
+    ADD COLUMN IF NOT EXISTS censor_lower double precision,
+    ADD COLUMN IF NOT EXISTS censor_upper double precision,
+    ADD COLUMN IF NOT EXISTS conc_q_lo double precision,
+    ADD COLUMN IF NOT EXISTS conc_q_med double precision,
+    ADD COLUMN IF NOT EXISTS conc_q_hi double precision,
+    ADD COLUMN IF NOT EXISTS p_below_lloq double precision,
+    ADD COLUMN IF NOT EXISTS p_above_uloq double precision,
+    ADD COLUMN IF NOT EXISTS p_below_cutoff double precision,
+    ADD COLUMN IF NOT EXISTS frac_draws_below_a double precision,
+    ADD COLUMN IF NOT EXISTS frac_draws_above_d double precision,
+    ADD COLUMN IF NOT EXISTS recovery_pct double precision;
+
+-- 0.7.0: modelled estimates for control wells. One row per (curve, method,
+-- well): a control is estimated through every curve it can be read on (same
+-- matching as test samples), masked controls included (included = false).
+-- concentration / log10_concentration are the expected values, NULL until a
+-- reference-value table exists (calib_points_SPEC.md, "Later").
+CREATE TABLE IF NOT EXISTS madi_results.calib_controls (
+    curve_id bigint NOT NULL,
+    method character varying(20) NOT NULL,
+    well character varying(20) NOT NULL,
+    sampleid character varying(128),
+    source character varying(64),
+    dilution numeric,
+    included boolean NOT NULL,
+    exclusion_reason character varying(20) NOT NULL DEFAULT 'none'::character varying,
+    mask_reason character varying,
+    concentration numeric,
+    log10_concentration numeric,
+    response_model numeric,
+    assay_response_raw numeric,
+    predicted_concentration numeric,
+    predicted_log10_concentration numeric,
+    final_concentration numeric,
+    se_concentration numeric,
+    pcov numeric,
+    pcov_rmse numeric,
+    pcov_pass boolean,
+    pcov_gate_class text CHECK (pcov_gate_class IN ('belowLLOQ','inDynamicRange','aboveULOQ')),
+    censor_class text CHECK (censor_class IN ('quantified','lod_to_lloq','below_lod',
+                                              'below_lloq','above_uloq','saturated','no_response')),
+    censor_type text CHECK (censor_type IN ('none','left','interval','right')),
+    censor_lower double precision,
+    censor_upper double precision,
+    conc_q_lo double precision,
+    conc_q_med double precision,
+    conc_q_hi double precision,
+    p_below_lloq double precision,
+    p_above_uloq double precision,
+    p_below_cutoff double precision,
+    frac_draws_below_a double precision,
+    frac_draws_above_d double precision,
+    job_id character varying(64),
+    created_at timestamp with time zone DEFAULT now(),
+    CONSTRAINT calib_controls_pkey PRIMARY KEY (curve_id, method, well),
+    CONSTRAINT calib_controls_curve_id_fkey FOREIGN KEY (curve_id) REFERENCES madi_results.curve_lookup(curve_id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_calib_controls_source
+    ON madi_results.calib_controls USING btree (curve_id, source);
 
 CREATE TABLE IF NOT EXISTS madi_results.calib_blanks (
     curve_id bigint NOT NULL,

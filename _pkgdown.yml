@@ -82,6 +82,14 @@ reference:
   - weights_contract
   - validate_weights_table
 
+- title: Control and calibrator estimates
+  desc: Column-level definition of calib_controls and the estimate columns of calib_standards; recovery of back-calculated standards.
+  contents:
+  - point_estimates_contract
+  - validate_point_estimates
+  - standard_recovery
+  - add_standard_recovery_multiplate
+
 - title: Eligibility & Selection
   desc: Model gating and best-model selection.
   contents:

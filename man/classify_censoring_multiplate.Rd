@@ -17,7 +17,9 @@ Call AFTER \code{\link[=compute_detection_limits_multiplate]{compute_detection_l
 \code{\link[=classify_pcov_gates_multiplate]{classify_pcov_gates_multiplate()}} -- the first point at which LODs,
 LLOQ/ULOQ and samples all exist on the result. Adds \code{censor_class},
 \code{censor_type}, \code{censor_lower} and \code{censor_upper} to \code{cr$samples} for every
-curve (all \code{NA} for a curve with no selected model).
+curve (all \code{NA} for a curve with no selected model). From 0.7.0 the same
+columns are added to \code{cr$controls} and \code{cr$standard_estimates} when a curve
+carries them.
 }
 \seealso{
 \code{\link[=classify_censoring]{classify_censoring()}}

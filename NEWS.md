@@ -1,3 +1,27 @@
+# curveRcore 0.6.0.9000 (development toward 0.7.0)
+
+## Data contract: modelled estimates for controls and calibrators
+
+* New table `calib_controls` in `R/calib_schema.sql`: one row per control well,
+  curve and method, with the same modelled estimates `calib_samples` holds for test
+  samples (back-calculated concentration, pcov, precision gate, censoring, draw
+  quantiles and probabilities), plus the control's `source` (its name, e.g.
+  `QC1 (Low)`), `included` / `exclusion_reason` / `mask_reason` (masked controls are
+  estimated too) and response columns. Expected control values are not stored here;
+  `concentration` / `log10_concentration` stay NULL until a reference-value table
+  exists (see `calib_points_SPEC.md`).
+* `calib_standards` gains the same estimate columns, plus `recovery_pct`
+  (estimated / nominal, %), as nullable `ADD COLUMN IF NOT EXISTS` additions. For
+  standards `pcov_rmse` includes the bias against the nominal value. Key and existing
+  columns are unchanged.
+* New `point_estimates_contract()` and `validate_point_estimates()`; a test keeps the
+  DDL and the contract in sync.
+* New `standard_recovery()` and `add_standard_recovery_multiplate()`.
+* `classify_pcov_gates_multiplate()` and `classify_censoring_multiplate()` now also
+  process `$controls` and `$standard_estimates` on each curve's result when present.
+  Results without them are handled exactly as before.
+* Design: `calib_points_SPEC.md`.
+
 # curveRcore 0.6.0
 
 ## Data contract: precision-weight tables
