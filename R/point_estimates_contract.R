@@ -82,7 +82,29 @@
   std <- rbind(std, r(S, est$column, est$type, FALSE, TRUE, "0.7.0", est$description),
                r(S, "recovery_pct", "double precision", FALSE, TRUE, "0.7.0",
                  "100 x estimated / nominal concentration at the point's dilution."))
-  rbind(ctrl, std)
+
+  R <- "control_reference"
+  ref <- rbind(
+    r(R, "reference_id", "bigint", TRUE, FALSE, "0.7.0", "Row identifier (generated)."),
+    r(R, "project_id", "integer", FALSE, FALSE, "0.7.0", "Project the value belongs to."),
+    r(R, "study_accession", "varchar(15)", FALSE, FALSE, "0.7.0", "Study, or '__none__' for a project-wide value."),
+    r(R, "control_source", "varchar(64)", FALSE, FALSE, "0.7.0", "Control name; matches calib_controls.source."),
+    r(R, "control_lot", "varchar(64)", FALSE, FALSE, "0.7.0", "Lot of the control material ('__none__' if not tracked)."),
+    r(R, "antigen", "varchar(64)", FALSE, FALSE, "0.7.0", "Antigen the value is for."),
+    r(R, "feature", "varchar(15)", FALSE, FALSE, "0.7.0", "Feature, or '__none__' for every feature."),
+    r(R, "units", "text", FALSE, TRUE, "0.7.0", "Concentration units (those of the standard curve)."),
+    r(R, "expected_conc", "numeric", FALSE, TRUE, "0.7.0", "Target concentration at stock (dilution 1), the scale of calib_controls.final_concentration."),
+    r(R, "expected_sd", "numeric", FALSE, TRUE, "0.7.0", "Expected run-to-run SD, same scale; gives z-scores and Levey-Jennings limits."),
+    r(R, "lower_limit", "numeric", FALSE, TRUE, "0.7.0", "Lower acceptance limit, same scale."),
+    r(R, "upper_limit", "numeric", FALSE, TRUE, "0.7.0", "Upper acceptance limit, same scale."),
+    r(R, "basis", "text", FALSE, TRUE, "0.7.0", "certificate, assigned or historical."),
+    r(R, "valid_from", "date", FALSE, FALSE, "0.7.0", "First day the value applies ('-infinity' = always)."),
+    r(R, "valid_to", "date", FALSE, TRUE, "0.7.0", "First day it no longer applies; NULL = still in force."),
+    r(R, "assigned_by", "text", FALSE, TRUE, "0.7.0", "Who assigned the value."),
+    r(R, "assigned_at", "timestamptz", FALSE, FALSE, "0.7.0", "When the value was recorded."),
+    r(R, "note", "text", FALSE, TRUE, "0.7.0", "Free-text note (source document, reason for a change).")
+  )
+  rbind(ctrl, std, ref)
 }
 
 
@@ -99,7 +121,12 @@
 #' for standards, whose true value is known: `recovery_pct`, and a `pcov_rmse`
 #' that includes the bias against the nominal value.
 #'
-#' @param table `"controls"`, `"standards"` or `"all"` (default).
+#' Also describes `madi_results.control_reference`, the expected values of
+#' controls (owned by I-SPI; joined to the estimates by the `calib_controls_qc`
+#' view).
+#'
+#' @param table `"controls"`, `"standards"`, `"control_reference"` or `"all"`
+#'   (default).
 #' @param estimates_only If `TRUE`, keep only the modelled-estimate columns (those
 #'   shared with `calib_samples`, plus `recovery_pct`).
 #' @return A data frame with columns `table`, `column`, `type`, `key`, `nullable`,
@@ -108,7 +135,8 @@
 #' @examples
 #' point_estimates_contract("standards", estimates_only = TRUE)[, c("column", "description")]
 #' @export
-point_estimates_contract <- function(table = c("all", "controls", "standards"),
+point_estimates_contract <- function(table = c("all", "controls", "standards",
+                                               "control_reference"),
                                      estimates_only = FALSE) {
   table <- match.arg(table)
   x <- .point_contract_rows()
@@ -130,11 +158,16 @@ point_estimates_contract <- function(table = c("all", "controls", "standards"),
 #' the database. `created_at` is filled by the database and may be absent.
 #'
 #' @param x Data frame of rows to be written.
-#' @param table `"controls"` or `"standards"`.
+#' For `control_reference`, the generated `reference_id` and the defaulted
+#' `assigned_at`, `valid_from`, `study_accession`, `control_lot` and `feature`
+#' may be absent.
+#'
+#' @param table `"controls"`, `"standards"` or `"control_reference"`.
 #' @return `x`, invisibly, if it conforms.
 #' @seealso [point_estimates_contract()]
 #' @export
-validate_point_estimates <- function(x, table = c("controls", "standards")) {
+validate_point_estimates <- function(x, table = c("controls", "standards",
+                                                  "control_reference")) {
   table <- match.arg(table)
   ct <- point_estimates_contract(table)
   problems <- character()
@@ -143,7 +176,10 @@ validate_point_estimates <- function(x, table = c("controls", "standards")) {
   if (length(unknown))
     problems <- c(problems, paste0("unknown column(s): ", paste(unknown, collapse = ", ")))
 
-  need <- setdiff(ct$column[ct$key | !ct$nullable], "created_at")
+  defaulted <- c("created_at", "reference_id", "assigned_at", "valid_from",
+                 "study_accession", "control_lot", "feature")
+  need <- setdiff(ct$column[ct$key | !ct$nullable],
+                  if (table == "control_reference") defaulted else "created_at")
   miss <- setdiff(need, names(x))
   if (length(miss))
     problems <- c(problems, paste0("missing required column(s): ", paste(miss, collapse = ", ")))
@@ -156,7 +192,8 @@ validate_point_estimates <- function(x, table = c("controls", "standards")) {
     pcov_gate_class  = c("belowLLOQ", "inDynamicRange", "aboveULOQ"),
     censor_class     = c("quantified", "lod_to_lloq", "below_lod", "below_lloq",
                          "above_uloq", "saturated", "no_response"),
-    censor_type      = c("none", "left", "interval", "right"))
+    censor_type      = c("none", "left", "interval", "right"),
+    basis            = c("certificate", "assigned", "historical"))
   for (cn in intersect(names(vocab), names(x))) {
     v <- unique(as.character(x[[cn]]))
     bad <- setdiff(v[!is.na(v)], vocab[[cn]])
@@ -165,7 +202,11 @@ validate_point_estimates <- function(x, table = c("controls", "standards")) {
                                      paste(bad, collapse = ", ")))
   }
 
-  if (anyDuplicated(x[intersect(ct$column[ct$key], names(x))]) && !length(miss))
+  keycols <- if (table == "control_reference")
+    intersect(c("project_id", "study_accession", "control_source", "control_lot",
+                "antigen", "feature", "valid_from"), names(x))
+  else intersect(ct$column[ct$key], names(x))
+  if (length(keycols) && anyDuplicated(x[keycols]) && !length(miss))
     problems <- c(problems, "duplicate primary-key rows")
 
   if (length(problems))

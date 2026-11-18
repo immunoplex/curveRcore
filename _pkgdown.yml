@@ -89,6 +89,14 @@ reference:
   - validate_point_estimates
   - standard_recovery
   - add_standard_recovery_multiplate
+  - estimate_points_from_stored
+
+- title: Release manifest
+  desc: Schema version and the composite manifest of versions behind a result.
+  contents:
+  - calib_schema_version
+  - release_manifest
+  - manifest_json
 
 - title: Eligibility & Selection
   desc: Model gating and best-model selection.

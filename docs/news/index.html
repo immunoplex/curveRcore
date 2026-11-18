@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.5.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,6 +36,43 @@
       <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/HEAD/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.0" id="curvercore-070">curveRcore 0.7.0<a class="anchor" aria-label="anchor" href="#curvercore-070"></a></h2>
+<div class="section level3">
+<h3 id="data-contract-estimates-and-expected-values-for-controls-and-calibrators-0-7-0">Data contract: estimates and expected values for controls and calibrators<a class="anchor" aria-label="anchor" href="#data-contract-estimates-and-expected-values-for-controls-and-calibrators-0-7-0"></a></h3>
+<ul><li>New table <code>calib_controls</code> in <code>R/calib_schema.sql</code>: one row per control well, curve and method, with the same modelled estimates <code>calib_samples</code> holds for test samples (back-calculated concentration, pcov, precision gate, censoring, draw quantiles and probabilities), plus the control’s <code>source</code> (its name, e.g. <code>QC1 (Low)</code>), <code>included</code> / <code>exclusion_reason</code> / <code>mask_reason</code> (masked controls are estimated too) and the response columns.</li>
+<li>
+<code>calib_standards</code> gains the same estimate columns, plus <code>recovery_pct</code> (estimated / nominal, %), as nullable <code>ADD COLUMN IF NOT EXISTS</code> additions. For standards <code>pcov_rmse</code> includes the bias against the nominal value. The key and the existing columns are unchanged.</li>
+<li>New table <code>control_reference</code> (expected values of controls, with acceptance limits, SD, lot, basis and validity period; owned by I-SPI) and view <code>calib_controls_qc</code> (each control estimate with the value in force on its run date: recovery, z-score, within limits).</li>
+<li>New <code><a href="../reference/point_estimates_contract.html">point_estimates_contract()</a></code> and <code><a href="../reference/validate_point_estimates.html">validate_point_estimates()</a></code> for the three tables; a test keeps the DDL and the contract in sync.</li>
+<li>New <code><a href="../reference/standard_recovery.html">standard_recovery()</a></code> and <code><a href="../reference/add_standard_recovery_multiplate.html">add_standard_recovery_multiplate()</a></code>.</li>
+<li>New <code><a href="../reference/estimate_points_from_stored.html">estimate_points_from_stored()</a></code>: back-calculates controls or standards from a stored fit (parameters, precision profile, limits, draws) without refitting. Used once to fill the new columns for curves fitted before 0.7.0. Checked against curveRfreq and curveRbayes (see <code>calib_points_SPEC.md</code>).</li>
+<li>
+<code><a href="../reference/classify_pcov_gates_multiplate.html">classify_pcov_gates_multiplate()</a></code> and <code><a href="../reference/classify_censoring_multiplate.html">classify_censoring_multiplate()</a></code> now also process <code>$controls</code> and <code>$standard_estimates</code> on each curve’s result when present. Results without them are handled exactly as before.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="release-manifest-0-7-0">Release manifest<a class="anchor" aria-label="anchor" href="#release-manifest-0-7-0"></a></h3>
+<ul><li>New table <code>schema_version</code>; applying <code>calib_schema.sql</code> records <code>calib_schema</code> 0.7.0. New <code><a href="../reference/calib_schema_version.html">calib_schema_version()</a></code>.</li>
+<li>
+<code>calib_run</code> gains <code>manifest</code> (jsonb): the composite release manifest a job ran under. New <code><a href="../reference/release_manifest.html">release_manifest()</a></code> (R, curveR packages, CmdStan, calib schema, renv lock hash, plus the caller’s component, version and commit) and <code><a href="../reference/manifest_json.html">manifest_json()</a></code>.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="other-0-7-0">Other<a class="anchor" aria-label="anchor" href="#other-0-7-0"></a></h3>
+<ul><li>
+<code>calib_schema.sql</code> no longer names a personal database role in its comments.</li>
+<li>Design: <code>calib_points_SPEC.md</code>.</li>
+</ul></div>
+</div>
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.6.0" id="curvercore-060">curveRcore 0.6.0<a class="anchor" aria-label="anchor" href="#curvercore-060"></a></h2>
+<div class="section level3">
+<h3 id="data-contract-precision-weight-tables-0-6-0">Data contract: precision-weight tables<a class="anchor" aria-label="anchor" href="#data-contract-precision-weight-tables-0-6-0"></a></h3>
+<ul><li>
+<code>R/calib_schema.sql</code> now defines <code>calib_weights</code> (per sample) and <code>calib_weights_fit</code> (per multiplate group), transcribed verbatim from the live DB. They were created by i-spi-compute migration 004 and were missing from the contract.</li>
+<li>Both tables are extended so one table holds the weights from either model, with keys unchanged (same sample hierarchy as <code>calib_samples</code>): a <code>model</code> column (default <code>multiplicative</code>, the model of every earlier row), <code>weights_pkg_version</code>, and the fields of the additive measurement-error model (per sample: <code>v_meas</code>, <code>tau2</code>, <code>reliability</code> with interval, <code>censor_type</code>, <code>bound</code>; per fit: <code>tau</code>, <code>kappa</code>, <code>reliability</code>, <code>fix_beta1</code>, <code>n_censored</code>, <code>identifiability</code>, with intervals). All new columns are nullable, so existing rows stay valid. The additions are idempotent <code>ADD COLUMN IF NOT EXISTS</code> statements. Design: <code>calib_weights_SPEC.md</code>.</li>
+<li>New <code><a href="../reference/weights_contract.html">weights_contract()</a></code> returns the column-level definition (type, key, which model a column applies to, description); new <code><a href="../reference/validate_weights_table.html">validate_weights_table()</a></code> checks rows against it before they are written. A test keeps the DDL and the contract in sync.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.5.2" id="curvercore-052">curveRcore 0.5.2<a class="anchor" aria-label="anchor" href="#curvercore-052"></a></h2>
 <div class="section level3">

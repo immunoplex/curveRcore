@@ -184,3 +184,24 @@ test_that("add_standard_recovery_multiplate fills recovery_pct and a bias-aware 
   one <- add_standard_recovery_multiplate(pe_fake_cr(7))
   expect_equal(one$standard_estimates$recovery_pct, st$recovery_pct)
 })
+
+# ---- control_reference ------------------------------------------------------------
+
+test_that("control_reference: DDL matches the contract and the validator applies its rules", {
+  p <- pe_ddl_path()
+  testthat::skip_if(is.na(p), "calib_schema.sql not available (installed package)")
+  sql <- readLines(p, warn = FALSE)
+  expect_equal(pe_ddl_columns(sql, "control_reference"),
+               point_estimates_contract("control_reference")$column)
+  expect_true(any(grepl("CREATE OR REPLACE VIEW madi_results.calib_controls_qc AS", sql)))
+
+  ok <- data.frame(project_id = 92L, control_source = "QC1 (Low)", antigen = "PT",
+                   expected_conc = 12.5, expected_sd = 1.1, basis = "assigned")
+  expect_silent(validate_point_estimates(ok, "control_reference"))
+  bad <- rbind(ok, ok); bad$basis[2] <- "guess"
+  err <- tryCatch(validate_point_estimates(bad, "control_reference"), error = conditionMessage)
+  expect_match(err, "'basis' holds value\\(s\\) not allowed: guess")
+  expect_match(err, "duplicate primary-key rows")
+  expect_error(validate_point_estimates(ok[, -1], "control_reference"),
+               "missing required column\\(s\\): project_id")
+})

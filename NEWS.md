@@ -1,25 +1,43 @@
-# curveRcore 0.6.0.9000 (development toward 0.7.0)
+# curveRcore 0.7.0
 
-## Data contract: modelled estimates for controls and calibrators
+## Data contract: estimates and expected values for controls and calibrators
 
 * New table `calib_controls` in `R/calib_schema.sql`: one row per control well,
   curve and method, with the same modelled estimates `calib_samples` holds for test
   samples (back-calculated concentration, pcov, precision gate, censoring, draw
   quantiles and probabilities), plus the control's `source` (its name, e.g.
   `QC1 (Low)`), `included` / `exclusion_reason` / `mask_reason` (masked controls are
-  estimated too) and response columns. Expected control values are not stored here;
-  `concentration` / `log10_concentration` stay NULL until a reference-value table
-  exists (see `calib_points_SPEC.md`).
+  estimated too) and the response columns.
 * `calib_standards` gains the same estimate columns, plus `recovery_pct`
   (estimated / nominal, %), as nullable `ADD COLUMN IF NOT EXISTS` additions. For
-  standards `pcov_rmse` includes the bias against the nominal value. Key and existing
-  columns are unchanged.
-* New `point_estimates_contract()` and `validate_point_estimates()`; a test keeps the
-  DDL and the contract in sync.
+  standards `pcov_rmse` includes the bias against the nominal value. The key and the
+  existing columns are unchanged.
+* New table `control_reference` (expected values of controls, with acceptance
+  limits, SD, lot, basis and validity period; owned by I-SPI) and view
+  `calib_controls_qc` (each control estimate with the value in force on its run
+  date: recovery, z-score, within limits).
+* New `point_estimates_contract()` and `validate_point_estimates()` for the three
+  tables; a test keeps the DDL and the contract in sync.
 * New `standard_recovery()` and `add_standard_recovery_multiplate()`.
+* New `estimate_points_from_stored()`: back-calculates controls or standards from a
+  stored fit (parameters, precision profile, limits, draws) without refitting. Used
+  once to fill the new columns for curves fitted before 0.7.0. Checked against
+  curveRfreq and curveRbayes (see `calib_points_SPEC.md`).
 * `classify_pcov_gates_multiplate()` and `classify_censoring_multiplate()` now also
   process `$controls` and `$standard_estimates` on each curve's result when present.
   Results without them are handled exactly as before.
+
+## Release manifest
+
+* New table `schema_version`; applying `calib_schema.sql` records `calib_schema`
+  0.7.0. New `calib_schema_version()`.
+* `calib_run` gains `manifest` (jsonb): the composite release manifest a job ran
+  under. New `release_manifest()` (R, curveR packages, CmdStan, calib schema, renv
+  lock hash, plus the caller's component, version and commit) and `manifest_json()`.
+
+## Other
+
+* `calib_schema.sql` no longer names a personal database role in its comments.
 * Design: `calib_points_SPEC.md`.
 
 # curveRcore 0.6.0

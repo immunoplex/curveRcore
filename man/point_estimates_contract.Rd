@@ -5,12 +5,13 @@
 \title{Data contract for control and calibrator estimates}
 \usage{
 point_estimates_contract(
-  table = c("all", "controls", "standards"),
+  table = c("all", "controls", "standards", "control_reference"),
   estimates_only = FALSE
 )
 }
 \arguments{
-\item{table}{\code{"controls"}, \code{"standards"} or \code{"all"} (default).}
+\item{table}{\code{"controls"}, \code{"standards"}, \code{"control_reference"} or \code{"all"}
+(default).}
 
 \item{estimates_only}{If \code{TRUE}, keep only the modelled-estimate columns (those
 shared with \code{calib_samples}, plus \code{recovery_pct}).}
@@ -31,6 +32,10 @@ sync. Design: \code{calib_points_SPEC.md}.
 The estimate columns mean the same as in \code{calib_samples}, with two additions
 for standards, whose true value is known: \code{recovery_pct}, and a \code{pcov_rmse}
 that includes the bias against the nominal value.
+
+Also describes \code{madi_results.control_reference}, the expected values of
+controls (owned by I-SPI; joined to the estimates by the \code{calib_controls_qc}
+view).
 }
 \examples{
 point_estimates_contract("standards", estimates_only = TRUE)[, c("column", "description")]

@@ -1,6 +1,6 @@
 Package: curveRcore
 Title: Shared Model Mathematics for Immunoassay Calibration Curves
-Version: 0.6.0.9000
+Version: 0.7.0
 Authors@R: c( person("Michael Scot", "Zens", email =
         "michael.s.zens@dartmouth.edu", role = c("aut", "cre")),
         person("Seamus O.", "Stein", email = "seamusstein@gmail.com",
@@ -19,8 +19,8 @@ Description: Foundation package for the curveR ecosystem. Provides the
 URL: https://github.com/immunoplex/curveRcore,
         https://immunoplex.github.io/curveRcore/
 BugReports: https://github.com/immunoplex/curveRcore/issues
-Imports: stats
-Suggests: testthat (>= 3.0.0), knitr, rmarkdown
+Imports: stats, tools, utils
+Suggests: testthat (>= 3.0.0), knitr, rmarkdown, jsonlite
 VignetteBuilder: knitr
 License: AGPL (>= 3)
 LazyData: true

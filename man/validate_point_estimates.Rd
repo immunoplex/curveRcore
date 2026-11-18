@@ -4,12 +4,18 @@
 \alias{validate_point_estimates}
 \title{Check control or standard rows against the contract before writing them}
 \usage{
-validate_point_estimates(x, table = c("controls", "standards"))
+validate_point_estimates(
+  x,
+  table = c("controls", "standards", "control_reference")
+)
 }
 \arguments{
-\item{x}{Data frame of rows to be written.}
+\item{x}{Data frame of rows to be written.
+For \code{control_reference}, the generated \code{reference_id} and the defaulted
+\code{assigned_at}, \code{valid_from}, \code{study_accession}, \code{control_lot} and \code{feature}
+may be absent.}
 
-\item{table}{\code{"controls"} or \code{"standards"}.}
+\item{table}{\code{"controls"}, \code{"standards"} or \code{"control_reference"}.}
 }
 \value{
 \code{x}, invisibly, if it conforms.

@@ -10,7 +10,8 @@
 --
 -- PREREQUISITE (external, not created here): madi_results.curve_lookup — the
 -- injection/lookup table that calib_fit / calib_diagnostics / calib_grid /
--- calib_samples FK to.
+-- calib_samples / calib_controls FK to; and madi_results.xmap_header (plate
+-- acquisition date), read by the calib_controls_qc view.
 --
 -- Idempotent (IF NOT EXISTS). Safe to re-run against the live DB.
 -- ============================================================================
@@ -46,6 +47,13 @@ CREATE TABLE IF NOT EXISTS madi_results.calib_run (
     CONSTRAINT calib_run_pkey PRIMARY KEY (job_id),
     CONSTRAINT calib_run_method_check CHECK ((method = ANY (ARRAY['frequentist'::text, 'bayesian'::text])))
 );
+
+-- 0.7.0: provenance of each job. The worker writes the composite release
+-- manifest it ran under (its image version and commit, R, curveR package
+-- versions, CmdStan, calib schema version, renv lock hash) as built by
+-- curveRcore::release_manifest(). NULL for jobs run before 0.7.0.
+ALTER TABLE madi_results.calib_run
+    ADD COLUMN IF NOT EXISTS manifest jsonb;
 
 CREATE TABLE IF NOT EXISTS madi_results.calib_fit (
     curve_id bigint NOT NULL,
@@ -383,8 +391,10 @@ ALTER TABLE madi_results.calib_weights_fit
 
 
 -- ============================================================================
--- Point sets: standards and blanks (input echoes, NO FK; keyed by
--- curve/method/well) and, from 0.7.0, controls (FK to curve_lookup)
+-- Children with NO FK (input echoes; keyed by curve/method/well)
+-- (from 0.7.0 this section also holds calib_controls, which has an FK to
+-- curve_lookup, and control_reference; the header line above is kept verbatim
+-- because i-spi-compute's e2e test locates sections by it)
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS madi_results.calib_standards (
@@ -481,6 +491,94 @@ CREATE TABLE IF NOT EXISTS madi_results.calib_controls (
 CREATE INDEX IF NOT EXISTS idx_calib_controls_source
     ON madi_results.calib_controls USING btree (curve_id, source);
 
+
+-- ============================================================================
+-- Control reference values (0.7.0; owned by I-SPI, never read by the engines)
+--
+-- The expected concentration of a control, kept apart from the fitted rows so
+-- that a value assigned or corrected later applies to every run, past runs
+-- included, with its history: one row per value and validity period.
+-- Concentrations are at stock (dilution 1), the scale of
+-- calib_controls.final_concentration. '__none__' in study_accession or feature
+-- means the value applies to the whole project / every feature.
+-- calib_controls_qc joins each control estimate to the value in force on the
+-- plate's acquisition date (most specific scope first).
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS madi_results.control_reference (
+    reference_id bigint GENERATED ALWAYS AS IDENTITY,
+    project_id integer NOT NULL,
+    study_accession character varying(15) NOT NULL DEFAULT '__none__'::character varying,
+    control_source character varying(64) NOT NULL,
+    control_lot character varying(64) NOT NULL DEFAULT '__none__'::character varying,
+    antigen character varying(64) NOT NULL,
+    feature character varying(15) NOT NULL DEFAULT '__none__'::character varying,
+    units text,
+    expected_conc numeric,
+    expected_sd numeric,
+    lower_limit numeric,
+    upper_limit numeric,
+    basis text,
+    valid_from date NOT NULL DEFAULT '-infinity'::date,
+    valid_to date,
+    assigned_by text,
+    assigned_at timestamp with time zone NOT NULL DEFAULT now(),
+    note text,
+    CONSTRAINT control_reference_pkey PRIMARY KEY (reference_id),
+    CONSTRAINT control_reference_scope_uniq UNIQUE (project_id, study_accession, control_source, control_lot, antigen, feature, valid_from),
+    CONSTRAINT control_reference_basis_chk CHECK (basis IS NULL OR basis IN ('certificate','assigned','historical')),
+    CONSTRAINT control_reference_period_chk CHECK (valid_to IS NULL OR valid_to > valid_from),
+    CONSTRAINT control_reference_limits_chk CHECK (lower_limit IS NULL OR upper_limit IS NULL OR lower_limit <= upper_limit),
+    CONSTRAINT control_reference_sd_chk CHECK (expected_sd IS NULL OR expected_sd > 0)
+);
+
+-- Prerequisites (external, not created here): curve_lookup and xmap_header.
+CREATE OR REPLACE VIEW madi_results.calib_controls_qc AS
+SELECT cc.curve_id, cc.method, cc.well, cc.sampleid, cc.source, cc.dilution,
+       cc.included, cc.exclusion_reason, cc.mask_reason,
+       cc.final_concentration, cc.predicted_log10_concentration, cc.se_concentration,
+       cc.pcov, cc.pcov_pass, cc.pcov_gate_class, cc.censor_class, cc.censor_type,
+       cc.conc_q_lo, cc.conc_q_med, cc.conc_q_hi, cc.job_id,
+       cl.project_id, cl.study_accession, cl.experiment_accession, cl.plateid, cl.plate,
+       cl.antigen, cl.feature, cl.source AS standard_source, cl.wavelength,
+       hd.run_date,
+       r.reference_id, r.control_lot, r.units, r.expected_conc, r.expected_sd,
+       r.lower_limit, r.upper_limit, r.basis,
+       CASE WHEN r.expected_conc > 0 AND cc.final_concentration IS NOT NULL
+            THEN 100 * cc.final_concentration / r.expected_conc END AS recovery_pct,
+       CASE WHEN r.expected_sd > 0 AND cc.final_concentration IS NOT NULL
+            THEN (cc.final_concentration - r.expected_conc) / r.expected_sd END AS z_score,
+       CASE WHEN cc.final_concentration IS NULL
+              OR (r.lower_limit IS NULL AND r.upper_limit IS NULL) THEN NULL
+            ELSE cc.final_concentration >= COALESCE(r.lower_limit, cc.final_concentration)
+             AND cc.final_concentration <= COALESCE(r.upper_limit, cc.final_concentration)
+       END AS within_limits
+FROM madi_results.calib_controls cc
+JOIN madi_results.curve_lookup cl ON cl.curve_id = cc.curve_id
+LEFT JOIN LATERAL (
+    SELECT min(h.acquisition_date) AS run_date
+    FROM madi_results.xmap_header h
+    WHERE h.project_id = cl.project_id
+      AND h.study_accession = cl.study_accession
+      AND h.experiment_accession = cl.experiment_accession
+      AND h.plateid = cl.plateid
+) hd ON true
+LEFT JOIN LATERAL (
+    SELECT r0.*
+    FROM madi_results.control_reference r0
+    WHERE r0.project_id = cl.project_id
+      AND r0.study_accession IN (cl.study_accession, '__none__')
+      AND r0.control_source = cc.source
+      AND r0.antigen = cl.antigen
+      AND r0.feature IN (cl.feature, '__none__')
+      AND (hd.run_date IS NULL
+           OR (r0.valid_from <= hd.run_date::date
+               AND (r0.valid_to IS NULL OR hd.run_date::date < r0.valid_to)))
+    ORDER BY (r0.study_accession <> '__none__') DESC, (r0.feature <> '__none__') DESC,
+             r0.valid_from DESC
+    LIMIT 1
+) r ON true;
+
 CREATE TABLE IF NOT EXISTS madi_results.calib_blanks (
     curve_id bigint NOT NULL,
     method character varying(20) NOT NULL,
@@ -575,6 +673,27 @@ CREATE TABLE IF NOT EXISTS madi_results.calib_settings_studycfg_log (
 ALTER SEQUENCE madi_results.calib_settings_calib_settings_id_seq
     OWNED BY madi_results.calib_settings.calib_settings_id;
 
--- OWNER is environment-specific (role 'd78039e' exists on the current DB but may
--- not on a fresh target — uncomment and set the correct role when applying there):
--- ALTER SEQUENCE madi_results.calib_settings_calib_settings_id_seq OWNER TO d78039e;
+-- OWNER is environment-specific (set the correct role when applying to a
+-- fresh target):
+-- ALTER SEQUENCE madi_results.calib_settings_calib_settings_id_seq OWNER TO <role>;
+
+
+-- ============================================================================
+-- Schema version (0.7.0). One row per component and version applied; the
+-- latest row per component is the version in force. Shown by I-SPI and carried
+-- in the release manifest. Applying this file records its own version; it must
+-- equal curveRcore::calib_schema_version() (a package test checks this).
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS madi_results.schema_version (
+    component text NOT NULL,
+    version text NOT NULL,
+    description text,
+    applied_at timestamp with time zone NOT NULL DEFAULT now(),
+    applied_by text NOT NULL DEFAULT current_user,
+    CONSTRAINT schema_version_pkey PRIMARY KEY (component, version)
+);
+
+INSERT INTO madi_results.schema_version (component, version, description)
+VALUES ('calib_schema', '0.7.0',
+        'curveRcore calib_* contract: calib_controls, calib_standards estimates, control_reference, calib_run.manifest, schema_version')
+ON CONFLICT (component, version) DO NOTHING;
