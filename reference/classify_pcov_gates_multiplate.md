@@ -4,11 +4,14 @@ Call this AFTER fit_calibration_freq()/fit_calibration_bayes() and AFTER
 compute_detection_limits_multiplate() – typically the very next line in
 the worker pipeline. Overwrites `cr$grid$pcov_pass` and
 `cr$samples$pcov_pass` for every curve, and adds
-`cr$samples$ pcov_gate_class`. `calib_grid` intentionally gets NO
-gate_class column (grid pcov_pass is recomputed for display symmetry
-only; it plays no role in deriving LLOQ/ULOQ, which happens upstream
-from the raw pcov profile before this function ever runs, so there is no
-circularity).
+`cr$samples$ pcov_gate_class`. From 0.7.0 the same is done for
+`cr$controls` and `cr$standard_estimates` when a curve carries them
+(control wells and back-calculated standards; see
+[`point_estimates_contract()`](https://immunoplex.github.io/curveRcore/reference/point_estimates_contract.md)).
+`calib_grid` intentionally gets NO gate_class column (grid pcov_pass is
+recomputed for display symmetry only; it plays no role in deriving
+LLOQ/ULOQ, which happens upstream from the raw pcov profile before this
+function ever runs, so there is no circularity).
 
 ## Usage
 

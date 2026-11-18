@@ -92,6 +92,35 @@ tables.
 - [`validate_weights_table()`](https://immunoplex.github.io/curveRcore/reference/validate_weights_table.md)
   : Check rows against the weights contract before writing them
 
+## Control and calibrator estimates
+
+Column-level definition of calib_controls and the estimate columns of
+calib_standards; recovery of back-calculated standards.
+
+- [`point_estimates_contract()`](https://immunoplex.github.io/curveRcore/reference/point_estimates_contract.md)
+  : Data contract for control and calibrator estimates
+- [`validate_point_estimates()`](https://immunoplex.github.io/curveRcore/reference/validate_point_estimates.md)
+  : Check control or standard rows against the contract before writing
+  them
+- [`standard_recovery()`](https://immunoplex.github.io/curveRcore/reference/standard_recovery.md)
+  : Recovery and bias-aware precision of back-calculated standards
+- [`add_standard_recovery_multiplate()`](https://immunoplex.github.io/curveRcore/reference/add_standard_recovery_multiplate.md)
+  : Add recovery and bias-aware pcov_rmse to every curve's standard
+  estimates
+- [`estimate_points_from_stored()`](https://immunoplex.github.io/curveRcore/reference/estimate_points_from_stored.md)
+  : Back-calculate points from a stored fit
+
+## Release manifest
+
+Schema version and the composite manifest of versions behind a result.
+
+- [`calib_schema_version()`](https://immunoplex.github.io/curveRcore/reference/calib_schema_version.md)
+  : Version of the calib schema defined by this package
+- [`release_manifest()`](https://immunoplex.github.io/curveRcore/reference/release_manifest.md)
+  : Composite release manifest
+- [`manifest_json()`](https://immunoplex.github.io/curveRcore/reference/manifest_json.md)
+  : Serialise a release manifest to JSON
+
 ## Eligibility & Selection
 
 Model gating and best-model selection.
