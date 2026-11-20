@@ -1,3 +1,16 @@
+# curveRcore 0.7.1
+
+## Data contract: options of the additive weights fit
+
+* `calib_weights_fit` gains a nullable `fit_options` column (text holding a JSON
+  object): the options the additive precision-weights fit actually used
+  (`use_censoring`, `patient_col`, `plate_col`, `fix_beta1`, `fix_kappa`), so a stored weight set says how it was made. `NULL` for
+  multiplicative rows and for rows written before 0.7.1. Added to
+  `weights_contract()` and `R/calib_schema.sql`.
+* `calib_schema_version()` is now `"0.7.1"`; applying `calib_schema.sql`
+  records it in `madi_results.schema_version`. In i-spi-compute this is
+  migration 012.
+
 # curveRcore 0.7.0
 
 ## Data contract: estimates and expected values for controls and calibrators

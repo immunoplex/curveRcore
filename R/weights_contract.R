@@ -73,7 +73,8 @@
     r(F, "reliability_hi", "double precision", FALSE, TRUE, "0.6.0", "additive", "Upper 95% credible limit of overall reliability."),
     r(F, "fix_beta1", "boolean", FALSE, TRUE, "0.6.0", "additive", "TRUE if beta1 was fixed at 1 rather than estimated."),
     r(F, "n_censored", "integer", FALSE, TRUE, "0.6.0", "additive", "Censored observations entering the likelihood."),
-    r(F, "identifiability", "text", FALSE, TRUE, "0.6.0", "additive", "Whether the signal/measurement split is set by the data or by the prior.")
+    r(F, "identifiability", "text", FALSE, TRUE, "0.6.0", "additive", "Whether the signal/measurement split is set by the data or by the prior."),
+    r(F, "fit_options", "text", FALSE, TRUE, "0.7.1", "additive", "JSON object of the options the additive fit actually used: use_censoring, patient_col, plate_col, fix_beta1, fix_kappa.")
   )
 }
 
