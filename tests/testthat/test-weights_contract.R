@@ -62,7 +62,7 @@ test_that("calib_schema.sql matches weights_contract, column for column and in o
     ct <- weights_contract(tb)
     expect_equal(ddl_columns(sql, sqlname), ct$column[ct$added_in == "0.5"],
                  info = paste(sqlname, "CREATE TABLE"))
-    expect_equal(ddl_added(sql, sqlname), ct$column[ct$added_in == "0.6.0"],
+    expect_equal(ddl_added(sql, sqlname), ct$column[ct$added_in %in% c("0.6.0", "0.7.1")],
                  info = paste(sqlname, "ALTER TABLE additions"))
   }
   # keys in the DDL

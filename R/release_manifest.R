@@ -19,7 +19,7 @@
 #' @examples
 #' calib_schema_version()
 #' @export
-calib_schema_version <- function() "0.7.0"
+calib_schema_version <- function() "0.7.1"
 
 
 #' Composite release manifest
