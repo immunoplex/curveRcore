@@ -388,7 +388,13 @@ ALTER TABLE madi_results.calib_weights_fit
     ADD COLUMN IF NOT EXISTS fix_beta1 boolean,
     ADD COLUMN IF NOT EXISTS n_censored integer,
     ADD COLUMN IF NOT EXISTS identifiability text,
-    ADD COLUMN IF NOT EXISTS fit_options text;
+    ADD COLUMN IF NOT EXISTS fit_options text,
+    ADD COLUMN IF NOT EXISTS rhat_max double precision,
+    ADD COLUMN IF NOT EXISTS n_divergent integer,
+    ADD COLUMN IF NOT EXISTS ess_min double precision,
+    ADD COLUMN IF NOT EXISTS ident_sd_ratio double precision,
+    ADD COLUMN IF NOT EXISTS resid_sd double precision,
+    ADD COLUMN IF NOT EXISTS resid_sd_ratio double precision;
 
 
 -- ============================================================================
@@ -696,5 +702,5 @@ CREATE TABLE IF NOT EXISTS madi_results.schema_version (
 
 INSERT INTO madi_results.schema_version (component, version, description)
 VALUES ('calib_schema', '0.7.1',
-        'curveRcore calib_* contract: calib_weights_fit.fit_options (additive weights fit options)')
+        'curveRcore calib_* contract: calib_weights_fit.fit_options and fit diagnostics (both weights models)')
 ON CONFLICT (component, version) DO NOTHING;

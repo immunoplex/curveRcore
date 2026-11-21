@@ -74,7 +74,13 @@
     r(F, "fix_beta1", "boolean", FALSE, TRUE, "0.6.0", "additive", "TRUE if beta1 was fixed at 1 rather than estimated."),
     r(F, "n_censored", "integer", FALSE, TRUE, "0.6.0", "additive", "Censored observations entering the likelihood."),
     r(F, "identifiability", "text", FALSE, TRUE, "0.6.0", "additive", "Whether the signal/measurement split is set by the data or by the prior."),
-    r(F, "fit_options", "text", FALSE, TRUE, "0.7.1", "additive", "JSON object of the options the additive fit actually used: use_censoring, patient_col, plate_col, fix_beta1, fix_kappa.")
+    r(F, "fit_options", "text", FALSE, TRUE, "0.7.1", "additive", "JSON object of the options the additive fit actually used: use_censoring, patient_col, plate_col, fix_beta1, fix_kappa."),
+    r(F, "rhat_max", "double precision", FALSE, TRUE, "0.7.1", "both", "Largest R-hat over the sampled parameters; above 1.05 the chains did not converge."),
+    r(F, "n_divergent", "integer", FALSE, TRUE, "0.7.1", "both", "Divergent transitions after warm-up; any is a sign the sampler could not explore the posterior."),
+    r(F, "ess_min", "double precision", FALSE, TRUE, "0.7.1", "both", "Lowest effective sample size (bulk or tail) over the sampled parameters; below about 400 the intervals are unreliable."),
+    r(F, "ident_sd_ratio", "double precision", FALSE, TRUE, "0.7.1", "both", "Posterior SD / prior SD of the key scale parameter (additive: log kappa; multiplicative: beta1). Near 1 the prior, not the data, set it; above 1 suggests a sampling problem. NULL when that parameter is fixed."),
+    r(F, "resid_sd", "double precision", FALSE, TRUE, "0.7.1", "both", "Robust SD of the scaled residuals (y - fitted mean) / sigma over quantified samples; about 1 when the variance model fits."),
+    r(F, "resid_sd_ratio", "double precision", FALSE, TRUE, "0.7.1", "both", "Robust SD of the scaled residuals in the lowest-se fifth / in the highest-se fifth. About 1 when the variance model fits across the se range; above 1 the low-se samples get too much weight, below 1 the high-se samples do.")
   )
 }
 
