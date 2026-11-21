@@ -1,5 +1,29 @@
 # Changelog
 
+## curveRcore 0.7.1
+
+### Data contract: options and diagnostics of the weights fit
+
+- `calib_weights_fit` gains a nullable `fit_options` column (text
+  holding a JSON object): the options the additive precision-weights fit
+  actually used (`use_censoring`, `patient_col`, `plate_col`,
+  `fix_beta1`, `fix_kappa`), so a stored weight set says how it was
+  made. `NULL` for multiplicative rows and for rows written before
+  0.7.1. Added to
+  [`weights_contract()`](https://immunoplex.github.io/curveRcore/reference/weights_contract.md)
+  and `R/calib_schema.sql`.
+- `calib_weights_fit` gains six nullable diagnostic columns, filled for
+  both weights models so they are judged on the same footing:
+  `rhat_max`, `n_divergent` and `ess_min` (did the sampler converge),
+  `ident_sd_ratio` (did the data rather than the prior set the key scale
+  parameter: log kappa for the additive model, beta1 for the
+  multiplicative one) and `resid_sd`, `resid_sd_ratio` (does the
+  variance model describe the scaled residuals across the range of se).
+  `NULL` for rows written before 0.7.1.
+- [`calib_schema_version()`](https://immunoplex.github.io/curveRcore/reference/calib_schema_version.md)
+  is now `"0.7.1"`; applying `calib_schema.sql` records it in
+  `madi_results.schema_version`. In i-spi-compute this is migration 012.
+
 ## curveRcore 0.7.0
 
 ### Data contract: estimates and expected values for controls and calibrators

@@ -76,34 +76,48 @@ weights_contract("fit", model = "additive")[, c("column", "description")]
 #> 27           fix_beta1
 #> 28          n_censored
 #> 29     identifiability
-#>                                                                                              description
-#> 1                                         Group of plates of one antigen/feature/source fitted together.
-#> 2                                                                               bayesian or frequentist.
-#> 3                                                                                               Antigen.
-#> 4                                                               Feature (isotype or functional readout).
-#> 5                      Comma-joined design columns defining the saturated cells, e.g. timeperiod,agroup.
-#> 6                                             Precision index used: se or pcov. Additive always uses se.
-#> 7                 Exponent on se. Multiplicative: estimated. Additive: 1 when fix_beta1, else estimated.
-#> 8                                                   Lower 95% credible limit of beta1 (NULL when fixed).
-#> 9                                                   Upper 95% credible limit of beta1 (NULL when fixed).
-#> 10 Plain-language reading of the fit (multiplicative: precision regime; additive: identifiability note).
-#> 11                                                                         Observations used in the fit.
-#> 12                                                                 Effective sample size of the weights.
-#> 13                                                                            Largest / smallest weight.
-#> 14                                                                       Compute job that wrote the row.
-#> 15                                                                             Time the row was written.
-#> 16                                                     multiplicative (every pre-0.6.0 row) or additive.
-#> 17                                                          curveRweights version that produced the fit.
-#> 18                                               SD of the true between-subject variation (log10 scale).
-#> 19                                                                      Lower 95% credible limit of tau.
-#> 20                                                                      Upper 95% credible limit of tau.
-#> 21                      Calibration factor on the reported se; 1 means se is exactly the measurement SD.
-#> 22                                                                    Lower 95% credible limit of kappa.
-#> 23                                                                    Upper 95% credible limit of kappa.
-#> 24                                 Overall reliability tau2 / (tau2 + mean v_meas) over quantified rows.
-#> 25                                                      Lower 95% credible limit of overall reliability.
-#> 26                                                      Upper 95% credible limit of overall reliability.
-#> 27                                                   TRUE if beta1 was fixed at 1 rather than estimated.
-#> 28                                                        Censored observations entering the likelihood.
-#> 29                              Whether the signal/measurement split is set by the data or by the prior.
+#> 30         fit_options
+#> 31            rhat_max
+#> 32         n_divergent
+#> 33             ess_min
+#> 34      ident_sd_ratio
+#> 35            resid_sd
+#> 36      resid_sd_ratio
+#>                                                                                                                                                                                                                      description
+#> 1                                                                                                                                                                 Group of plates of one antigen/feature/source fitted together.
+#> 2                                                                                                                                                                                                       bayesian or frequentist.
+#> 3                                                                                                                                                                                                                       Antigen.
+#> 4                                                                                                                                                                                       Feature (isotype or functional readout).
+#> 5                                                                                                                                              Comma-joined design columns defining the saturated cells, e.g. timeperiod,agroup.
+#> 6                                                                                                                                                                     Precision index used: se or pcov. Additive always uses se.
+#> 7                                                                                                                                         Exponent on se. Multiplicative: estimated. Additive: 1 when fix_beta1, else estimated.
+#> 8                                                                                                                                                                           Lower 95% credible limit of beta1 (NULL when fixed).
+#> 9                                                                                                                                                                           Upper 95% credible limit of beta1 (NULL when fixed).
+#> 10                                                                                                                         Plain-language reading of the fit (multiplicative: precision regime; additive: identifiability note).
+#> 11                                                                                                                                                                                                 Observations used in the fit.
+#> 12                                                                                                                                                                                         Effective sample size of the weights.
+#> 13                                                                                                                                                                                                    Largest / smallest weight.
+#> 14                                                                                                                                                                                               Compute job that wrote the row.
+#> 15                                                                                                                                                                                                     Time the row was written.
+#> 16                                                                                                                                                                             multiplicative (every pre-0.6.0 row) or additive.
+#> 17                                                                                                                                                                                  curveRweights version that produced the fit.
+#> 18                                                                                                                                                                       SD of the true between-subject variation (log10 scale).
+#> 19                                                                                                                                                                                              Lower 95% credible limit of tau.
+#> 20                                                                                                                                                                                              Upper 95% credible limit of tau.
+#> 21                                                                                                                                              Calibration factor on the reported se; 1 means se is exactly the measurement SD.
+#> 22                                                                                                                                                                                            Lower 95% credible limit of kappa.
+#> 23                                                                                                                                                                                            Upper 95% credible limit of kappa.
+#> 24                                                                                                                                                         Overall reliability tau2 / (tau2 + mean v_meas) over quantified rows.
+#> 25                                                                                                                                                                              Lower 95% credible limit of overall reliability.
+#> 26                                                                                                                                                                              Upper 95% credible limit of overall reliability.
+#> 27                                                                                                                                                                           TRUE if beta1 was fixed at 1 rather than estimated.
+#> 28                                                                                                                                                                                Censored observations entering the likelihood.
+#> 29                                                                                                                                                      Whether the signal/measurement split is set by the data or by the prior.
+#> 30                                                                                                       JSON object of the options the additive fit actually used: use_censoring, patient_col, plate_col, fix_beta1, fix_kappa.
+#> 31                                                                                                                                            Largest R-hat over the sampled parameters; above 1.05 the chains did not converge.
+#> 32                                                                                                                               Divergent transitions after warm-up; any is a sign the sampler could not explore the posterior.
+#> 33                                                                                                        Lowest effective sample size (bulk or tail) over the sampled parameters; below about 400 the intervals are unreliable.
+#> 34              Posterior SD / prior SD of the key scale parameter (additive: log kappa; multiplicative: beta1). Near 1 the prior, not the data, set it; above 1 suggests a sampling problem. NULL when that parameter is fixed.
+#> 35                                                                                                    Robust SD of the scaled residuals (y - fitted mean) / sigma over quantified samples; about 1 when the variance model fits.
+#> 36 Robust SD of the scaled residuals in the lowest-se fifth / in the highest-se fifth. About 1 when the variance model fits across the se range; above 1 the low-se samples get too much weight, below 1 the high-se samples do.
 ```

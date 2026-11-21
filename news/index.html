@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,9 +33,21 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/v0.7.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.7.1" id="curvercore-071">curveRcore 0.7.1<a class="anchor" aria-label="anchor" href="#curvercore-071"></a></h2>
+<div class="section level3">
+<h3 id="data-contract-options-and-diagnostics-of-the-weights-fit-0-7-1">Data contract: options and diagnostics of the weights fit<a class="anchor" aria-label="anchor" href="#data-contract-options-and-diagnostics-of-the-weights-fit-0-7-1"></a></h3>
+<ul><li>
+<code>calib_weights_fit</code> gains a nullable <code>fit_options</code> column (text holding a JSON object): the options the additive precision-weights fit actually used (<code>use_censoring</code>, <code>patient_col</code>, <code>plate_col</code>, <code>fix_beta1</code>, <code>fix_kappa</code>), so a stored weight set says how it was made. <code>NULL</code> for multiplicative rows and for rows written before 0.7.1. Added to <code><a href="../reference/weights_contract.html">weights_contract()</a></code> and <code>R/calib_schema.sql</code>.</li>
+<li>
+<code>calib_weights_fit</code> gains six nullable diagnostic columns, filled for both weights models so they are judged on the same footing: <code>rhat_max</code>, <code>n_divergent</code> and <code>ess_min</code> (did the sampler converge), <code>ident_sd_ratio</code> (did the data rather than the prior set the key scale parameter: log kappa for the additive model, beta1 for the multiplicative one) and <code>resid_sd</code>, <code>resid_sd_ratio</code> (does the variance model describe the scaled residuals across the range of se). <code>NULL</code> for rows written before 0.7.1.</li>
+<li>
+<code><a href="../reference/calib_schema_version.html">calib_schema_version()</a></code> is now <code>"0.7.1"</code>; applying <code>calib_schema.sql</code> records it in <code>madi_results.schema_version</code>. In i-spi-compute this is migration 012.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.0" id="curvercore-070">curveRcore 0.7.0<a class="anchor" aria-label="anchor" href="#curvercore-070"></a></h2>
 <div class="section level3">

@@ -17,7 +17,7 @@ keeps the two in sync."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,7 +43,7 @@ keeps the two in sync."></head><body>
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Data contract for the precision-weight tables</h1>
-      <small class="dont-index">Source: <a href="https://github.com/immunoplex/curveRcore/blob/v0.7.0/R/weights_contract.R" class="external-link"><code>R/weights_contract.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/R/weights_contract.R" class="external-link"><code>R/weights_contract.R</code></a></small>
       <div class="d-none name"><code>weights_contract.Rd</code></div>
     </div>
 
@@ -128,36 +128,50 @@ that wrote the row is <code>NULL</code>.</p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 27           fix_beta1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 28          n_censored</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 29     identifiability</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                                                                                              description</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1                                         Group of plates of one antigen/feature/source fitted together.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2                                                                               bayesian or frequentist.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3                                                                                               Antigen.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4                                                               Feature (isotype or functional readout).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5                      Comma-joined design columns defining the saturated cells, e.g. timeperiod,agroup.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6                                             Precision index used: se or pcov. Additive always uses se.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 7                 Exponent on se. Multiplicative: estimated. Additive: 1 when fix_beta1, else estimated.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 8                                                   Lower 95% credible limit of beta1 (NULL when fixed).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 9                                                   Upper 95% credible limit of beta1 (NULL when fixed).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 10 Plain-language reading of the fit (multiplicative: precision regime; additive: identifiability note).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 11                                                                         Observations used in the fit.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 12                                                                 Effective sample size of the weights.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 13                                                                            Largest / smallest weight.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 14                                                                       Compute job that wrote the row.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 15                                                                             Time the row was written.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 16                                                     multiplicative (every pre-0.6.0 row) or additive.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 17                                                          curveRweights version that produced the fit.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 18                                               SD of the true between-subject variation (log10 scale).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 19                                                                      Lower 95% credible limit of tau.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 20                                                                      Upper 95% credible limit of tau.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 21                      Calibration factor on the reported se; 1 means se is exactly the measurement SD.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 22                                                                    Lower 95% credible limit of kappa.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 23                                                                    Upper 95% credible limit of kappa.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 24                                 Overall reliability tau2 / (tau2 + mean v_meas) over quantified rows.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 25                                                      Lower 95% credible limit of overall reliability.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 26                                                      Upper 95% credible limit of overall reliability.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 27                                                   TRUE if beta1 was fixed at 1 rather than estimated.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 28                                                        Censored observations entering the likelihood.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 29                              Whether the signal/measurement split is set by the data or by the prior.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30         fit_options</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31            rhat_max</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32         n_divergent</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33             ess_min</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34      ident_sd_ratio</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35            resid_sd</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36      resid_sd_ratio</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                                                                                                                                                                                                                      description</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1                                                                                                                                                                 Group of plates of one antigen/feature/source fitted together.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2                                                                                                                                                                                                       bayesian or frequentist.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3                                                                                                                                                                                                                       Antigen.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4                                                                                                                                                                                       Feature (isotype or functional readout).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5                                                                                                                                              Comma-joined design columns defining the saturated cells, e.g. timeperiod,agroup.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6                                                                                                                                                                     Precision index used: se or pcov. Additive always uses se.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 7                                                                                                                                         Exponent on se. Multiplicative: estimated. Additive: 1 when fix_beta1, else estimated.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 8                                                                                                                                                                           Lower 95% credible limit of beta1 (NULL when fixed).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 9                                                                                                                                                                           Upper 95% credible limit of beta1 (NULL when fixed).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 10                                                                                                                         Plain-language reading of the fit (multiplicative: precision regime; additive: identifiability note).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 11                                                                                                                                                                                                 Observations used in the fit.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 12                                                                                                                                                                                         Effective sample size of the weights.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 13                                                                                                                                                                                                    Largest / smallest weight.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 14                                                                                                                                                                                               Compute job that wrote the row.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 15                                                                                                                                                                                                     Time the row was written.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 16                                                                                                                                                                             multiplicative (every pre-0.6.0 row) or additive.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 17                                                                                                                                                                                  curveRweights version that produced the fit.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 18                                                                                                                                                                       SD of the true between-subject variation (log10 scale).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 19                                                                                                                                                                                              Lower 95% credible limit of tau.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 20                                                                                                                                                                                              Upper 95% credible limit of tau.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 21                                                                                                                                              Calibration factor on the reported se; 1 means se is exactly the measurement SD.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 22                                                                                                                                                                                            Lower 95% credible limit of kappa.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 23                                                                                                                                                                                            Upper 95% credible limit of kappa.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 24                                                                                                                                                         Overall reliability tau2 / (tau2 + mean v_meas) over quantified rows.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 25                                                                                                                                                                              Lower 95% credible limit of overall reliability.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 26                                                                                                                                                                              Upper 95% credible limit of overall reliability.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 27                                                                                                                                                                           TRUE if beta1 was fixed at 1 rather than estimated.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 28                                                                                                                                                                                Censored observations entering the likelihood.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 29                                                                                                                                                      Whether the signal/measurement split is set by the data or by the prior.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 30                                                                                                       JSON object of the options the additive fit actually used: use_censoring, patient_col, plate_col, fix_beta1, fix_kappa.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 31                                                                                                                                            Largest R-hat over the sampled parameters; above 1.05 the chains did not converge.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 32                                                                                                                               Divergent transitions after warm-up; any is a sign the sampler could not explore the posterior.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 33                                                                                                        Lowest effective sample size (bulk or tail) over the sampled parameters; below about 400 the intervals are unreliable.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 34              Posterior SD / prior SD of the key scale parameter (additive: log kappa; multiplicative: beta1). Near 1 the prior, not the data, set it; above 1 suggests a sampling problem. NULL when that parameter is fixed.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 35                                                                                                    Robust SD of the scaled residuals (y - fitted mean) / sigma over quantified samples; about 1 when the variance model fits.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 36 Robust SD of the scaled residuals in the lowest-se fifth / in the highest-se fifth. About 1 when the variance model fits across the se range; above 1 the low-se samples get too much weight, below 1 the high-se samples do.</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

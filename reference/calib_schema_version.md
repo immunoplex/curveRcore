@@ -19,5 +19,5 @@ Character scalar, e.g. `"0.7.0"`.
 
 ``` r
 calib_schema_version()
-#> [1] "0.7.0"
+#> [1] "0.7.1"
 ```
