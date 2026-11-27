@@ -10,7 +10,8 @@ new_study_params(
   apply_prozone = TRUE,
   blank_option = "ignored",
   persist_draws = FALSE,
-  bayes_single_plate = FALSE
+  bayes_single_plate = FALSE,
+  noise_model = "constant"
 )
 }
 \arguments{
@@ -36,6 +37,10 @@ light \code{calib_hyperparam}/\code{calib_fit_diag} tables are always written.}
 fit independently (N_plates = 1, no cross-plate pooling) instead of as
 one multiplate hierarchy. Default FALSE (multiplate pooling). The
 frequentist engine is always per-plate and ignores this flag.}
+
+\item{noise_model}{Character. Response noise model, one of \link{NOISE_MODELS}:
+\code{"constant"} (default) or \code{"add_prop"} (additive + proportional; see
+\code{\link[=noise_sd]{noise_sd()}}). Opt-in; recommended for absorbance (ELISA).}
 }
 \value{
 A named list of class \code{study_params}.

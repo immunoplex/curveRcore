@@ -1,5 +1,21 @@
 # curveRcore 0.8.0 (development)
 
+## Additive + proportional response noise model
+
+* New `noise_sd()`, `NOISE_MODELS`, `check_noise_model()` and
+  `fit_add_prop_noise()`: a noise model shared by both engines.
+  `"constant"` (default; existing fits unchanged) or `"add_prop"`,
+  sigma^2 = sigma_add^2 + (cv * mu)^2 on the raw response, converted to the
+  log10 scale by the delta method. Valid on either response scale; replaces the
+  power-of-mean term `exp(log_sigma0 + slope * log|mu|)`, which was undefined on
+  a log10 response (mu crosses 0 where the response is 1) and was never enabled
+  by the worker.
+* `new_study_params()` gains `noise_model` (default `"constant"`).
+* `estimate_points_from_stored()` gains `is_log_response`; reads the
+  frequentist terms `sigma_add`, `cv` (per-point response SD) and Bayesian
+  `noise$noise_model = "add_prop"` with `sigma_add`, `cv` draws. The
+  `use_hetero` / `log_sigma0` path is removed.
+
 ## One rule for values <= 0 and blank subtraction
 
 * New `compute_response_adjustment()`: one response adjustment per fit group,

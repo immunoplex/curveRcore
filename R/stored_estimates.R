@@ -66,12 +66,15 @@
 #'   length-1 element is a fixed parameter and is recycled.
 #' @param fixed_a Numeric scalar, the fixed lower asymptote, or `NULL`.
 #' @param noise Optional list for Bayesian fits, per draw and aligned with
-#'   `draws`: `sigma_obs`, `nu`, and for the heteroscedastic model `log_sigma0`,
-#'   `log_sigma_slope` (with `use_hetero = TRUE`). When given, each draw's
+#'   `draws`: `sigma_obs`, `nu`, and for the additive + proportional model
+#'   `sigma_add`, `cv` (with `noise_model = "add_prop"`; see [noise_sd()]). When given, each draw's
 #'   response is perturbed by the fitted observation noise before inversion, as
 #'   the engine does with `include_measurement_error = TRUE`.
 #' @param is_log_independent Logical: is x (concentration) on the log10 scale in
 #'   the fit?
+#' @param is_log_response Logical: is the response on the log10 scale in the fit?
+#'   Only used by the additive + proportional noise model (frequentist terms
+#'   `sigma_add`, `cv`, or Bayesian `noise$noise_model = "add_prop"`).
 #' @param nominal Optional numeric vector: the points' nominal concentration on
 #'   the fit's x scale (standards). When given, `recovery_pct` and a bias-aware
 #'   `pcov_rmse` are added via [standard_recovery()].
@@ -93,6 +96,7 @@ estimate_points_from_stored <- function(response, dilution = 1, model_name, para
                                         grid = NULL, limits = list(), draws = NULL,
                                         fixed_a = NULL, noise = NULL,
                                         is_log_independent = TRUE, nominal = NULL,
+                                        is_log_response = TRUE,
                                         cv_x_max = 150, pcov_threshold = 20,
                                         decision_cutoff = NULL, seed = 1L) {
   method <- match.arg(method)
@@ -111,12 +115,22 @@ estimate_points_from_stored <- function(response, dilution = 1, model_name, para
   storage.mode(params) <- "double"
   # Frequentist residual SE (calib_param term 'sigma_resid'): the response noise
   # the engine adds to every back-calculation. Not a curve parameter.
-  se_response <- 0
+  # With the additive + proportional model (terms sigma_add, cv) the SD depends
+  # on the response: one SD per point, from the observed response as the proxy
+  # for its mean (as the engines do for samples).
+  se_response <- rep(0, n)
   if ("sigma_resid" %in% names(params)) {
     if (method == "frequentist" && is.finite(params[["sigma_resid"]]))
-      se_response <- params[["sigma_resid"]]
+      se_response <- rep(params[["sigma_resid"]], n)
     params <- params[names(params) != "sigma_resid"]
   }
+  if (all(c("sigma_add", "cv") %in% names(params))) {
+    if (method == "frequentist" && all(is.finite(params[c("sigma_add", "cv")])))
+      se_response <- noise_sd(response, "add_prop", sigma_add = params[["sigma_add"]],
+                              cv = params[["cv"]], is_log_response = is_log_response)
+    params <- params[!names(params) %in% c("sigma_add", "cv")]
+  }
+  se_response[!is.finite(se_response)] <- 0
   use_fixed <- !is.null(fixed_a) && length(fixed_a) == 1L && is.finite(fixed_a)
   if (use_fixed) params <- params[names(params) != "a"]
   fns <- tryCatch(make_inv_and_grad_fixed(model_name, fixed_a = if (use_fixed) fixed_a else NULL),
@@ -134,7 +148,7 @@ estimate_points_from_stored <- function(response, dilution = 1, model_name, para
       dl <- lapply(dl, function(v) if (length(v) == 1L) rep(v, S) else v)
       if (all(lengths(dl) == S)) {
         P <- do.call(cbind, dl)
-        P <- P[, colnames(P) != "sigma_resid", drop = FALSE]
+        P <- P[, !colnames(P) %in% c("sigma_resid", "sigma_add", "cv"), drop = FALSE]
         if (use_fixed) P <- P[, colnames(P) != "a", drop = FALSE]
       }
     }
@@ -145,13 +159,14 @@ estimate_points_from_stored <- function(response, dilution = 1, model_name, para
   Y <- NULL
   if (!is.null(P)) {
     Y <- matrix(response, nrow = n, ncol = nrow(P))
-    if (method == "frequentist" && se_response > 0) {
-      Y <- .with_local_seed(seed, Y + matrix(stats::rnorm(n * nrow(P), 0, se_response), nrow = n))
+    if (method == "frequentist" && any(se_response > 0)) {
+      Y <- .with_local_seed(seed, Y + matrix(stats::rnorm(n * nrow(P), 0, rep(se_response, nrow(P))), nrow = n))
     } else if (method == "bayesian" && !is.null(noise) && length(noise$sigma_obs) == nrow(P)) {
-      hetero <- isTRUE(noise$use_hetero) && !is.null(noise$log_sigma0)
+      addp <- identical(noise$noise_model, "add_prop") && !is.null(noise$sigma_add) && !is.null(noise$cv)
       Y <- .with_local_seed(seed, {
         for (s in seq_len(nrow(P))) {
-          sig <- if (hetero) exp(noise$log_sigma0[s] + noise$log_sigma_slope[s] * log(abs(response) + 1e-10))
+          sig <- if (addp) noise_sd(response, "add_prop", sigma_add = noise$sigma_add[s],
+                                    cv = noise$cv[s], is_log_response = is_log_response)
                  else noise$sigma_obs[s]
           Y[, s] <- response + sig * stats::rt(n, df = noise$nu[s])
         }
@@ -215,7 +230,7 @@ estimate_points_from_stored <- function(response, dilution = 1, model_name, para
         cm <- intersect(names(g), terms)
         v <- as.numeric(t(g[cm]) %*% Sigma[cm, cm, drop = FALSE] %*% g[cm])
         gy <- tryCatch(fns$grad_y(response[i], params), error = function(e) NA_real_)
-        if (se_response > 0 && is.finite(gy)) v <- v + gy^2 * se_response^2
+        if (se_response[i] > 0 && is.finite(gy)) v <- v + gy^2 * se_response[i]^2
         if (is.finite(v) && v >= 0) se[i] <- sqrt(v)
       }
     }

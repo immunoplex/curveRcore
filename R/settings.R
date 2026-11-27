@@ -79,6 +79,9 @@ new_antigen_constraints <- function(antigen,
 #'   fit independently (N_plates = 1, no cross-plate pooling) instead of as
 #'   one multiplate hierarchy. Default FALSE (multiplate pooling). The
 #'   frequentist engine is always per-plate and ignores this flag.
+#' @param noise_model Character. Response noise model, one of [NOISE_MODELS]:
+#'   `"constant"` (default) or `"add_prop"` (additive + proportional; see
+#'   [noise_sd()]). Opt-in; recommended for absorbance (ELISA).
 #'
 #' @return A named list of class `study_params`.
 #'
@@ -88,13 +91,15 @@ new_study_params <- function(is_log_response    = TRUE,
                              apply_prozone      = TRUE,
                              blank_option       = "ignored",
                              persist_draws      = FALSE,
-                             bayes_single_plate = FALSE) {
+                             bayes_single_plate = FALSE,
+                             noise_model        = "constant") {
 
   valid_blanks <- c("ignored", "included", "subtracted",
                     "subtracted_3x", "subtracted_10x")
   if (!(blank_option %in% valid_blanks)) {
     stop("blank_option must be one of: ", paste(valid_blanks, collapse = ", "))
   }
+  noise_model <- check_noise_model(noise_model)
   stopifnot(is.logical(is_log_response), is.logical(is_log_independent),
             is.logical(apply_prozone),
             is.logical(persist_draws),      length(persist_draws) == 1L,
@@ -106,7 +111,8 @@ new_study_params <- function(is_log_response    = TRUE,
     apply_prozone      = apply_prozone,
     blank_option       = blank_option,
     persist_draws      = persist_draws,
-    bayes_single_plate = bayes_single_plate
+    bayes_single_plate = bayes_single_plate,
+    noise_model        = noise_model
   )
   class(out) <- c("study_params", "list")
   out
