@@ -1,3 +1,28 @@
+# curveRcore 0.8.0 (development)
+
+## One rule for values <= 0 and blank subtraction
+
+* New `compute_response_adjustment()`: one response adjustment per fit group,
+  computed from the included calibrators (standard points), controls and test
+  samples — never the blanks. On the log-response path, if every value is > 0
+  nothing changes; if any is <= 0, the offset `-min + delta` (default
+  `delta = 0.001` response units) is added to every value so each well is kept
+  and estimated. Replaces the floors that put standards at 1% of the smallest
+  positive response and samples at 1e-6.
+* New `transform_sample_response()` and `untransform_response()`: the single
+  transform (and inverse) for samples and controls, matching what
+  `preprocess_standards()` does to the standards.
+* `preprocess_standards()` gains `response_adjustment` (the group-wide
+  adjustment; computed from the standards alone when NULL) and `offset_delta`.
+  It returns `response_adjustment`, and `derived_stats` now records
+  `blank_centre`, `blank_value`, `response_offset`, `offset_delta` and
+  `n_nonpositive`. Data whose responses are all > 0 give identical results.
+* Blank subtraction (opt-in only; the default stays `"ignored"`): values that
+  become <= 0 are no longer floored at 1 (log) / 0 (linear); the offset handles
+  them. The blank centre is the geometric mean when every included blank is
+  > 0 (unchanged) and the arithmetic mean when any blank is <= 0 (the geometric
+  mean silently dropped those blanks).
+
 # curveRcore 0.7.1
 
 ## Data contract: options and diagnostics of the weights fit

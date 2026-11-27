@@ -15,6 +15,8 @@ preprocess_standards(
   is_log_independent = TRUE,
   apply_prozone = TRUE,
   include_col = "included",
+  response_adjustment = NULL,
+  offset_delta = 0.001,
   verbose = FALSE
 )
 }
@@ -40,6 +42,12 @@ preprocess_standards(
 \item{include_col}{Character. Name of the logical include/mask column on
 \code{data} and \code{blank_data}. Absent on a frame = all its rows are included.}
 
+\item{response_adjustment}{List from \code{\link[=compute_response_adjustment]{compute_response_adjustment()}} for the
+whole fit group (standards + controls + samples), or NULL to compute it
+from the standards alone.}
+
+\item{offset_delta}{Numeric. \code{delta} used when \code{response_adjustment} is NULL.}
+
 \item{verbose}{Logical.}
 }
 \value{
@@ -54,7 +62,12 @@ floor, carrying \code{include_col}, the model-space response, and
 \item{\code{antigen_fit_options}}{Record of the options used.}
 \item{\code{derived_stats}}{The set-level statistics computed from the
 included points: \code{blank_geomean}, \code{prozone_peak_response},
-\code{prozone_logc_at_peak}, \code{response_floor}, \code{min_included_concentration}.}
+\code{prozone_logc_at_peak}, \code{response_floor}, \code{min_included_concentration},
+\code{blank_centre}, \code{blank_value}, \code{response_offset}, \code{offset_delta},
+\code{n_nonpositive}.}
+\item{\code{response_adjustment}}{The adjustment used (with \code{response_floor}
+added); pass it to \code{\link[=transform_sample_response]{transform_sample_response()}} for samples and
+controls.}
 }
 }
 \description{
@@ -89,4 +102,11 @@ caller explicitly selects \code{"subtracted"}, \code{"subtracted_3x"}, or
 mean), or adds the blank mean as a point via \code{"included"}. The returned
 blanks are always the raw and model-space blank responses, never a
 subtracted quantity.
+
+\strong{Values <= 0 (log response).} One rule, shared with the controls and test
+samples via \code{response_adjustment} (see \code{\link[=compute_response_adjustment]{compute_response_adjustment()}}): if
+every included calibrator, control and test-sample response is > 0 nothing
+changes; otherwise the offset \code{-min + delta} is added to every value before
+log10, so every well is kept. Blanks never decide the offset. When
+\code{response_adjustment} is NULL it is computed from the standards alone.
 }
