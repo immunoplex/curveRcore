@@ -135,6 +135,21 @@ reference:
   - compute_log_response
   - correct_prozone
 
+- title: Response adjustment
+  desc: One blank value and one offset for values <= 0 per fit group, shared by standards, controls and samples.
+  contents:
+  - compute_response_adjustment
+  - transform_sample_response
+  - untransform_response
+
+- title: Noise model
+  desc: Constant or additive + proportional response noise, shared by both engines.
+  contents:
+  - NOISE_MODELS
+  - check_noise_model
+  - noise_sd
+  - fit_add_prop_noise
+
 - title: Inverses
   desc: Back-calculation functions for all five models.
   contents:
