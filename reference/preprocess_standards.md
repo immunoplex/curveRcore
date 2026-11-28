@@ -17,6 +17,8 @@ preprocess_standards(
   is_log_independent = TRUE,
   apply_prozone = TRUE,
   include_col = "included",
+  response_adjustment = NULL,
+  offset_delta = 0.001,
   verbose = FALSE
 )
 ```
@@ -64,6 +66,17 @@ preprocess_standards(
   Character. Name of the logical include/mask column on `data` and
   `blank_data`. Absent on a frame = all its rows are included.
 
+- response_adjustment:
+
+  List from
+  [`compute_response_adjustment()`](https://immunoplex.github.io/curveRcore/reference/compute_response_adjustment.md)
+  for the whole fit group (standards + controls + samples), or NULL to
+  compute it from the standards alone.
+
+- offset_delta:
+
+  Numeric. `delta` used when `response_adjustment` is NULL.
+
 - verbose:
 
   Logical.
@@ -91,7 +104,14 @@ A named list:
 
   The set-level statistics computed from the included points:
   `blank_geomean`, `prozone_peak_response`, `prozone_logc_at_peak`,
-  `response_floor`, `min_included_concentration`.
+  `response_floor`, `min_included_concentration`, `blank_centre`,
+  `blank_value`, `response_offset`, `offset_delta`, `n_nonpositive`.
+
+- `response_adjustment`:
+
+  The adjustment used (with `response_floor` added); pass it to
+  [`transform_sample_response()`](https://immunoplex.github.io/curveRcore/reference/transform_sample_response.md)
+  for samples and controls.
 
 ## Details
 
@@ -124,3 +144,12 @@ when the caller explicitly selects `"subtracted"`, `"subtracted_3x"`, or
 geometric mean), or adds the blank mean as a point via `"included"`. The
 returned blanks are always the raw and model-space blank responses,
 never a subtracted quantity.
+
+**Values \<= 0 (log response).** One rule, shared with the controls and
+test samples via `response_adjustment` (see
+[`compute_response_adjustment()`](https://immunoplex.github.io/curveRcore/reference/compute_response_adjustment.md)):
+if every included calibrator, control and test-sample response is \> 0
+nothing changes; otherwise the offset `-min + delta` is added to every
+value before log10, so every well is kept. Blanks never decide the
+offset. When `response_adjustment` is NULL it is computed from the
+standards alone.

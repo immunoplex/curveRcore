@@ -185,6 +185,32 @@ Data transforms applied before fitting.
 - [`correct_prozone()`](https://immunoplex.github.io/curveRcore/reference/correct_prozone.md)
   : Correct the Prozone (Hook) Effect
 
+## Response adjustment
+
+One blank value and one offset for values \<= 0 per fit group, shared by
+standards, controls and samples.
+
+- [`compute_response_adjustment()`](https://immunoplex.github.io/curveRcore/reference/compute_response_adjustment.md)
+  : Compute the Response Adjustment for One Fit Group
+- [`transform_sample_response()`](https://immunoplex.github.io/curveRcore/reference/transform_sample_response.md)
+  : Put Raw Responses on the Fitting Scale
+- [`untransform_response()`](https://immunoplex.github.io/curveRcore/reference/untransform_response.md)
+  : Back-transform Fitted Responses to the Raw Scale
+
+## Noise model
+
+Constant or additive + proportional response noise, shared by both
+engines.
+
+- [`NOISE_MODELS`](https://immunoplex.github.io/curveRcore/reference/NOISE_MODELS.md)
+  : Response Noise Models
+- [`check_noise_model()`](https://immunoplex.github.io/curveRcore/reference/check_noise_model.md)
+  : Validate a Noise Model Name
+- [`noise_sd()`](https://immunoplex.github.io/curveRcore/reference/noise_sd.md)
+  : Observation-Noise SD on the Fitting Scale
+- [`fit_add_prop_noise()`](https://immunoplex.github.io/curveRcore/reference/fit_add_prop_noise.md)
+  : Fit the Additive + Proportional Noise Parameters to Residuals
+
 ## Inverses
 
 Back-calculation functions for all five models.

@@ -81,5 +81,8 @@ response floor.
 
 ## Details
 
-After subtraction, values that become non-positive are floored at 0
-(linear) or 1 (log scale).
+The blank value is the geometric mean of the included blanks when all
+are0, the arithmetic mean when any is \<= 0. Values that become \<= 0
+aftersubtraction are kept (no floor); on the log path the offset
+fromcompute_response_adjustment() handles them. Subtraction is opt-in
+only.

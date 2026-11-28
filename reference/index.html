@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -561,6 +561,73 @@
 
         </dt>
         <dd>Correct the Prozone (Hook) Effect</dd>
+      </dl></div><div class="section level2">
+      <h2 id="response-adjustment">Response adjustment<a class="anchor" aria-label="anchor" href="#response-adjustment"></a></h2>
+
+      <div class="section-desc"><p>One blank value and one offset for values &lt;= 0 per fit group, shared by standards, controls and samples.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="compute_response_adjustment.html">compute_response_adjustment()</a></code>
+
+        </dt>
+        <dd>Compute the Response Adjustment for One Fit Group</dd>
+
+        <dt>
+
+          <code><a href="transform_sample_response.html">transform_sample_response()</a></code>
+
+        </dt>
+        <dd>Put Raw Responses on the Fitting Scale</dd>
+
+        <dt>
+
+          <code><a href="untransform_response.html">untransform_response()</a></code>
+
+        </dt>
+        <dd>Back-transform Fitted Responses to the Raw Scale</dd>
+      </dl></div><div class="section level2">
+      <h2 id="noise-model">Noise model<a class="anchor" aria-label="anchor" href="#noise-model"></a></h2>
+
+      <div class="section-desc"><p>Constant or additive + proportional response noise, shared by both engines.</p></div>
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="NOISE_MODELS.html">NOISE_MODELS</a></code>
+
+        </dt>
+        <dd>Response Noise Models</dd>
+
+        <dt>
+
+          <code><a href="check_noise_model.html">check_noise_model()</a></code>
+
+        </dt>
+        <dd>Validate a Noise Model Name</dd>
+
+        <dt>
+
+          <code><a href="noise_sd.html">noise_sd()</a></code>
+
+        </dt>
+        <dd>Observation-Noise SD on the Fitting Scale</dd>
+
+        <dt>
+
+          <code><a href="fit_add_prop_noise.html">fit_add_prop_noise()</a></code>
+
+        </dt>
+        <dd>Fit the Additive + Proportional Noise Parameters to Residuals</dd>
       </dl></div><div class="section level2">
       <h2 id="inverses">Inverses<a class="anchor" aria-label="anchor" href="#inverses"></a></h2>
 

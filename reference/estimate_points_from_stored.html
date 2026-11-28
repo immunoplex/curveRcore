@@ -17,7 +17,7 @@ calib_points_SPEC.md for how close each column is to the engine's own value."></
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -43,7 +43,7 @@ calib_points_SPEC.md for how close each column is to the engine's own value."></
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Back-calculate points from a stored fit</h1>
-      <small class="dont-index">Source: <a href="https://github.com/immunoplex/curveRcore/blob/v0.7.1/R/stored_estimates.R" class="external-link"><code>R/stored_estimates.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/R/stored_estimates.R" class="external-link"><code>R/stored_estimates.R</code></a></small>
       <div class="d-none name"><code>estimate_points_from_stored.Rd</code></div>
     </div>
 
@@ -71,6 +71,7 @@ refitted. Intended for the one-off backfill of curves fitted before 0.7.0; see
 <span>  noise <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  is_log_independent <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  nominal <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  is_log_response <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  cv_x_max <span class="op">=</span> <span class="fl">150</span>,</span>
 <span>  pcov_threshold <span class="op">=</span> <span class="fl">20</span>,</span>
 <span>  decision_cutoff <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -132,8 +133,8 @@ length-1 element is a fixed parameter and is recycled.</p></dd>
 
 <dt id="arg-noise">noise<a class="anchor" aria-label="anchor" href="#arg-noise"></a></dt>
 <dd><p>Optional list for Bayesian fits, per draw and aligned with
-<code>draws</code>: <code>sigma_obs</code>, <code>nu</code>, and for the heteroscedastic model <code>log_sigma0</code>,
-<code>log_sigma_slope</code> (with <code>use_hetero = TRUE</code>). When given, each draw's
+<code>draws</code>: <code>sigma_obs</code>, <code>nu</code>, and for the additive + proportional model
+<code>sigma_add</code>, <code>cv</code> (with <code>noise_model = "add_prop"</code>; see <code><a href="noise_sd.html">noise_sd()</a></code>). When given, each draw's
 response is perturbed by the fitted observation noise before inversion, as
 the engine does with <code>include_measurement_error = TRUE</code>.</p></dd>
 
@@ -147,6 +148,12 @@ the fit?</p></dd>
 <dd><p>Optional numeric vector: the points' nominal concentration on
 the fit's x scale (standards). When given, <code>recovery_pct</code> and a bias-aware
 <code>pcov_rmse</code> are added via <code><a href="standard_recovery.html">standard_recovery()</a></code>.</p></dd>
+
+
+<dt id="arg-is-log-response">is_log_response<a class="anchor" aria-label="anchor" href="#arg-is-log-response"></a></dt>
+<dd><p>Logical: is the response on the log10 scale in the fit?
+Only used by the additive + proportional noise model (frequentist terms
+<code>sigma_add</code>, <code>cv</code>, or Bayesian <code>noise$noise_model = "add_prop"</code>).</p></dd>
 
 
 <dt id="arg-cv-x-max-pcov-threshold">cv_x_max, pcov_threshold<a class="anchor" aria-label="anchor" href="#arg-cv-x-max-pcov-threshold"></a></dt>

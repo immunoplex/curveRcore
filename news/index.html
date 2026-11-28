@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1.9000</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -33,9 +33,28 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/v0.7.1/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/immunoplex/curveRcore/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.8.0" id="curvercore-080-development">curveRcore 0.8.0 (development)<a class="anchor" aria-label="anchor" href="#curvercore-080-development"></a></h2>
+<div class="section level3">
+<h3 id="additive--proportional-response-noise-model-0-8-0">Additive + proportional response noise model<a class="anchor" aria-label="anchor" href="#additive--proportional-response-noise-model-0-8-0"></a></h3>
+<ul><li>New <code><a href="../reference/noise_sd.html">noise_sd()</a></code>, <code>NOISE_MODELS</code>, <code><a href="../reference/check_noise_model.html">check_noise_model()</a></code> and <code><a href="../reference/fit_add_prop_noise.html">fit_add_prop_noise()</a></code>: a noise model shared by both engines. <code>"constant"</code> (default; existing fits unchanged) or <code>"add_prop"</code>, sigma^2 = sigma_add^2 + (cv * mu)^2 on the raw response, converted to the log10 scale by the delta method. Valid on either response scale; replaces the power-of-mean term <code>exp(log_sigma0 + slope * log|mu|)</code>, which was undefined on a log10 response (mu crosses 0 where the response is 1) and was never enabled by the worker.</li>
+<li>
+<code><a href="../reference/new_study_params.html">new_study_params()</a></code> gains <code>noise_model</code> (default <code>"constant"</code>).</li>
+<li>
+<code><a href="../reference/estimate_points_from_stored.html">estimate_points_from_stored()</a></code> gains <code>is_log_response</code>; reads the frequentist terms <code>sigma_add</code>, <code>cv</code> (per-point response SD) and Bayesian <code>noise$noise_model = "add_prop"</code> with <code>sigma_add</code>, <code>cv</code> draws. The <code>use_hetero</code> / <code>log_sigma0</code> path is removed.</li>
+</ul></div>
+<div class="section level3">
+<h3 id="one-rule-for-values--and-blank-subtraction-0-8-0">One rule for values &lt;= 0 and blank subtraction<a class="anchor" aria-label="anchor" href="#one-rule-for-values--and-blank-subtraction-0-8-0"></a></h3>
+<ul><li>New <code><a href="../reference/compute_response_adjustment.html">compute_response_adjustment()</a></code>: one response adjustment per fit group, computed from the included calibrators (standard points), controls and test samples — never the blanks. On the log-response path, if every value is &gt; 0 nothing changes; if any is &lt;= 0, the offset <code>-min + delta</code> (default <code>delta = 0.001</code> response units) is added to every value so each well is kept and estimated. Replaces the floors that put standards at 1% of the smallest positive response and samples at 1e-6.</li>
+<li>New <code><a href="../reference/transform_sample_response.html">transform_sample_response()</a></code> and <code><a href="../reference/untransform_response.html">untransform_response()</a></code>: the single transform (and inverse) for samples and controls, matching what <code><a href="../reference/preprocess_standards.html">preprocess_standards()</a></code> does to the standards.</li>
+<li>
+<code><a href="../reference/preprocess_standards.html">preprocess_standards()</a></code> gains <code>response_adjustment</code> (the group-wide adjustment; computed from the standards alone when NULL) and <code>offset_delta</code>. It returns <code>response_adjustment</code>, and <code>derived_stats</code> now records <code>blank_centre</code>, <code>blank_value</code>, <code>response_offset</code>, <code>offset_delta</code> and <code>n_nonpositive</code>. Data whose responses are all &gt; 0 give identical results.</li>
+<li>Blank subtraction (opt-in only; the default stays <code>"ignored"</code>): values that become &lt;= 0 are no longer floored at 1 (log) / 0 (linear); the offset handles them. The blank centre is the geometric mean when every included blank is &gt; 0 (unchanged) and the arithmetic mean when any blank is &lt;= 0 (the geometric mean silently dropped those blanks).</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.7.1" id="curvercore-071">curveRcore 0.7.1<a class="anchor" aria-label="anchor" href="#curvercore-071"></a></h2>
 <div class="section level3">

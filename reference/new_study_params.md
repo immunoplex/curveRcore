@@ -11,7 +11,8 @@ new_study_params(
   apply_prozone = TRUE,
   blank_option = "ignored",
   persist_draws = FALSE,
-  bayes_single_plate = FALSE
+  bayes_single_plate = FALSE,
+  noise_model = "constant"
 )
 ```
 
@@ -48,6 +49,14 @@ new_study_params(
   (N_plates = 1, no cross-plate pooling) instead of as one multiplate
   hierarchy. Default FALSE (multiplate pooling). The frequentist engine
   is always per-plate and ignores this flag.
+
+- noise_model:
+
+  Character. Response noise model, one of
+  [NOISE_MODELS](https://immunoplex.github.io/curveRcore/reference/NOISE_MODELS.md):
+  `"constant"` (default) or `"add_prop"` (additive + proportional; see
+  [`noise_sd()`](https://immunoplex.github.io/curveRcore/reference/noise_sd.md)).
+  Opt-in; recommended for absorbance (ELISA).
 
 ## Value
 

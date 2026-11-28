@@ -25,6 +25,7 @@ estimate_points_from_stored(
   noise = NULL,
   is_log_independent = TRUE,
   nominal = NULL,
+  is_log_response = TRUE,
   cv_x_max = 150,
   pcov_threshold = 20,
   decision_cutoff = NULL,
@@ -85,10 +86,12 @@ estimate_points_from_stored(
 - noise:
 
   Optional list for Bayesian fits, per draw and aligned with `draws`:
-  `sigma_obs`, `nu`, and for the heteroscedastic model `log_sigma0`,
-  `log_sigma_slope` (with `use_hetero = TRUE`). When given, each draw's
-  response is perturbed by the fitted observation noise before
-  inversion, as the engine does with `include_measurement_error = TRUE`.
+  `sigma_obs`, `nu`, and for the additive + proportional model
+  `sigma_add`, `cv` (with `noise_model = "add_prop"`; see
+  [`noise_sd()`](https://immunoplex.github.io/curveRcore/reference/noise_sd.md)).
+  When given, each draw's response is perturbed by the fitted
+  observation noise before inversion, as the engine does with
+  `include_measurement_error = TRUE`.
 
 - is_log_independent:
 
@@ -100,6 +103,12 @@ estimate_points_from_stored(
   fit's x scale (standards). When given, `recovery_pct` and a bias-aware
   `pcov_rmse` are added via
   [`standard_recovery()`](https://immunoplex.github.io/curveRcore/reference/standard_recovery.md).
+
+- is_log_response:
+
+  Logical: is the response on the log10 scale in the fit? Only used by
+  the additive + proportional noise model (frequentist terms
+  `sigma_add`, `cv`, or Bayesian `noise$noise_model = "add_prop"`).
 
 - cv_x_max, pcov_threshold:
 

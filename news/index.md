@@ -1,5 +1,61 @@
 # Changelog
 
+## curveRcore 0.8.0 (development)
+
+### Additive + proportional response noise model
+
+- New
+  [`noise_sd()`](https://immunoplex.github.io/curveRcore/reference/noise_sd.md),
+  `NOISE_MODELS`,
+  [`check_noise_model()`](https://immunoplex.github.io/curveRcore/reference/check_noise_model.md)
+  and
+  [`fit_add_prop_noise()`](https://immunoplex.github.io/curveRcore/reference/fit_add_prop_noise.md):
+  a noise model shared by both engines. `"constant"` (default; existing
+  fits unchanged) or `"add_prop"`, sigma^2 = sigma_add^2 + (cv \* mu)^2
+  on the raw response, converted to the log10 scale by the delta method.
+  Valid on either response scale; replaces the power-of-mean term
+  `exp(log_sigma0 + slope * log|mu|)`, which was undefined on a log10
+  response (mu crosses 0 where the response is 1) and was never enabled
+  by the worker.
+- [`new_study_params()`](https://immunoplex.github.io/curveRcore/reference/new_study_params.md)
+  gains `noise_model` (default `"constant"`).
+- [`estimate_points_from_stored()`](https://immunoplex.github.io/curveRcore/reference/estimate_points_from_stored.md)
+  gains `is_log_response`; reads the frequentist terms `sigma_add`, `cv`
+  (per-point response SD) and Bayesian `noise$noise_model = "add_prop"`
+  with `sigma_add`, `cv` draws. The `use_hetero` / `log_sigma0` path is
+  removed.
+
+### One rule for values \<= 0 and blank subtraction
+
+- New
+  [`compute_response_adjustment()`](https://immunoplex.github.io/curveRcore/reference/compute_response_adjustment.md):
+  one response adjustment per fit group, computed from the included
+  calibrators (standard points), controls and test samples — never the
+  blanks. On the log-response path, if every value is \> 0 nothing
+  changes; if any is \<= 0, the offset `-min + delta` (default
+  `delta = 0.001` response units) is added to every value so each well
+  is kept and estimated. Replaces the floors that put standards at 1% of
+  the smallest positive response and samples at 1e-6.
+- New
+  [`transform_sample_response()`](https://immunoplex.github.io/curveRcore/reference/transform_sample_response.md)
+  and
+  [`untransform_response()`](https://immunoplex.github.io/curveRcore/reference/untransform_response.md):
+  the single transform (and inverse) for samples and controls, matching
+  what
+  [`preprocess_standards()`](https://immunoplex.github.io/curveRcore/reference/preprocess_standards.md)
+  does to the standards.
+- [`preprocess_standards()`](https://immunoplex.github.io/curveRcore/reference/preprocess_standards.md)
+  gains `response_adjustment` (the group-wide adjustment; computed from
+  the standards alone when NULL) and `offset_delta`. It returns
+  `response_adjustment`, and `derived_stats` now records `blank_centre`,
+  `blank_value`, `response_offset`, `offset_delta` and `n_nonpositive`.
+  Data whose responses are all \> 0 give identical results.
+- Blank subtraction (opt-in only; the default stays `"ignored"`): values
+  that become \<= 0 are no longer floored at 1 (log) / 0 (linear); the
+  offset handles them. The blank centre is the geometric mean when every
+  included blank is \> 0 (unchanged) and the arithmetic mean when any
+  blank is \<= 0 (the geometric mean silently dropped those blanks).
+
 ## curveRcore 0.7.1
 
 ### Data contract: options and diagnostics of the weights fit
