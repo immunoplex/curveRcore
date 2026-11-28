@@ -73,5 +73,5 @@ m <- release_manifest("example", "1.0.0", cmdstan = FALSE)
 m$calib_schema
 #> [1] "0.7.1"
 cat(manifest_json(m))
-#> {"manifest_version":1,"created_at":"2026-11-28T11:20:08Z","component":"example","version":"1.0.0","commit":null,"r_version":"4.6.2","platform":"x86_64-pc-linux-gnu","packages":{"curveRcore":"0.7.1.9000","curveRfreq":null,"curveRbayes":null,"curveRweights":null},"cmdstan":null,"calib_schema":"0.7.1","renv_lock_md5":null}
+#> {"manifest_version":1,"created_at":"2026-11-28T11:44:43Z","component":"example","version":"1.0.0","commit":null,"r_version":"4.6.2","platform":"x86_64-pc-linux-gnu","packages":{"curveRcore":"0.8.0","curveRfreq":null,"curveRbayes":null,"curveRweights":null},"cmdstan":null,"calib_schema":"0.7.1","renv_lock_md5":null}
 ```

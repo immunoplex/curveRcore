@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">curveRcore</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.7.1.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.8.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="0.8.0" id="curvercore-080-development">curveRcore 0.8.0 (development)<a class="anchor" aria-label="anchor" href="#curvercore-080-development"></a></h2>
+<h2 class="pkg-version" data-toc-text="0.8.0" id="curvercore-080">curveRcore 0.8.0<a class="anchor" aria-label="anchor" href="#curvercore-080"></a></h2>
 <div class="section level3">
 <h3 id="additive--proportional-response-noise-model-0-8-0">Additive + proportional response noise model<a class="anchor" aria-label="anchor" href="#additive--proportional-response-noise-model-0-8-0"></a></h3>
 <ul><li>New <code><a href="../reference/noise_sd.html">noise_sd()</a></code>, <code>NOISE_MODELS</code>, <code><a href="../reference/check_noise_model.html">check_noise_model()</a></code> and <code><a href="../reference/fit_add_prop_noise.html">fit_add_prop_noise()</a></code>: a noise model shared by both engines. <code>"constant"</code> (default; existing fits unchanged) or <code>"add_prop"</code>, sigma^2 = sigma_add^2 + (cv * mu)^2 on the raw response, converted to the log10 scale by the delta method. Valid on either response scale; replaces the power-of-mean term <code>exp(log_sigma0 + slope * log|mu|)</code>, which was undefined on a log10 response (mu crosses 0 where the response is 1) and was never enabled by the worker.</li>
