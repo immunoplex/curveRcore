@@ -17,6 +17,7 @@ estimate_points_from_stored(
   noise = NULL,
   is_log_independent = TRUE,
   nominal = NULL,
+  is_log_response = TRUE,
   cv_x_max = 150,
   pcov_threshold = 20,
   decision_cutoff = NULL,
@@ -55,8 +56,8 @@ length-1 element is a fixed parameter and is recycled.}
 \item{fixed_a}{Numeric scalar, the fixed lower asymptote, or \code{NULL}.}
 
 \item{noise}{Optional list for Bayesian fits, per draw and aligned with
-\code{draws}: \code{sigma_obs}, \code{nu}, and for the heteroscedastic model \code{log_sigma0},
-\code{log_sigma_slope} (with \code{use_hetero = TRUE}). When given, each draw's
+\code{draws}: \code{sigma_obs}, \code{nu}, and for the additive + proportional model
+\code{sigma_add}, \code{cv} (with \code{noise_model = "add_prop"}; see \code{\link[=noise_sd]{noise_sd()}}). When given, each draw's
 response is perturbed by the fitted observation noise before inversion, as
 the engine does with \code{include_measurement_error = TRUE}.}
 
@@ -66,6 +67,10 @@ the fit?}
 \item{nominal}{Optional numeric vector: the points' nominal concentration on
 the fit's x scale (standards). When given, \code{recovery_pct} and a bias-aware
 \code{pcov_rmse} are added via \code{\link[=standard_recovery]{standard_recovery()}}.}
+
+\item{is_log_response}{Logical: is the response on the log10 scale in the fit?
+Only used by the additive + proportional noise model (frequentist terms
+\code{sigma_add}, \code{cv}, or Bayesian \code{noise$noise_model = "add_prop"}).}
 
 \item{cv_x_max, pcov_threshold}{As in the engines (defaults 150 and 20).}
 

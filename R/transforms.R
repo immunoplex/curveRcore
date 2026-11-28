@@ -197,8 +197,10 @@ correct_prozone <- function(stdframe,
 #' * `"subtracted_3x"` — subtract 3× geometric mean
 #' * `"subtracted_10x"` — subtract 10× geometric mean
 #'
-#' After subtraction, values that become non-positive are floored at
-#' 0 (linear) or 1 (log scale).
+#' The blank value is the geometric mean of the included blanks when all are
+#' > 0, the arithmetic mean when any is <= 0. Values that become <= 0 after
+#' subtraction are kept (no floor); on the log path the offset from
+#' [compute_response_adjustment()] handles them. Subtraction is opt-in only.
 #'
 #' @param blank_data Data frame of blank measurements, or NULL.
 #' @param data Data frame of standard curve data.
@@ -254,12 +256,12 @@ perform_blank_operation <- function(blank_data, data, response_variable,
   # Set-level statistic: geometric mean of INCLUDED blanks only.
   if (is.null(blank_mean)) {
     binc       <- .included_mask(blank_data, include_col)
-    blank_mean <- geom_mean(blank_data[[response_variable]][binc])
+    blank_mean <- .blank_centre(blank_data[[response_variable]][binc])
   }
   data[[response_variable]] <- data[[response_variable]] - factor * blank_mean
 
-  floor_val <- if (is_log_response) 1 else 0
-  data[[response_variable]] <- pmax(data[[response_variable]], floor_val)
+  # No floor: values <= 0 are kept and handled by the log offset
+  # (compute_response_adjustment()), the same rule as for every other well.
 
   if (verbose) message("Blank subtraction (x", factor, ") applied.")
   data
@@ -288,7 +290,7 @@ include_blanks_conc <- function(blank_data, data, response_variable,
   binc <- .included_mask(blank_data, include_col)
   sinc <- .included_mask(data, include_col)
 
-  response_blank    <- geom_mean(blank_data[[response_variable]][binc])
+  response_blank    <- .blank_centre(blank_data[[response_variable]][binc])
   min_concentration <- min(data[[independent_variable]][sinc], na.rm = TRUE)
   conc_blank        <- min_concentration - log10(2)
 
@@ -412,6 +414,13 @@ validate_fixed_lower_asymptote <- function(fixed_a_result_raw, verbose = FALSE) 
 #' blanks are always the raw and model-space blank responses, never a
 #' subtracted quantity.
 #'
+#' **Values <= 0 (log response).** One rule, shared with the controls and test
+#' samples via `response_adjustment` (see [compute_response_adjustment()]): if
+#' every included calibrator, control and test-sample response is > 0 nothing
+#' changes; otherwise the offset `-min + delta` is added to every value before
+#' log10, so every well is kept. Blanks never decide the offset. When
+#' `response_adjustment` is NULL it is computed from the standards alone.
+#'
 #' @param data Data frame of standards with a `dilution` column.
 #' @param antigen_settings Named list with `standard_curve_concentration`.
 #' @param response_variable Character. Response column name.
@@ -423,6 +432,10 @@ validate_fixed_lower_asymptote <- function(fixed_a_result_raw, verbose = FALSE) 
 #' @param apply_prozone Logical. Apply prozone correction?
 #' @param include_col Character. Name of the logical include/mask column on
 #'   `data` and `blank_data`. Absent on a frame = all its rows are included.
+#' @param response_adjustment List from [compute_response_adjustment()] for the
+#'   whole fit group (standards + controls + samples), or NULL to compute it
+#'   from the standards alone.
+#' @param offset_delta Numeric. `delta` used when `response_adjustment` is NULL.
 #' @param verbose Logical.
 #'
 #' @return A named list:
@@ -436,7 +449,12 @@ validate_fixed_lower_asymptote <- function(fixed_a_result_raw, verbose = FALSE) 
 #'     \item{`antigen_fit_options`}{Record of the options used.}
 #'     \item{`derived_stats`}{The set-level statistics computed from the
 #'       included points: `blank_geomean`, `prozone_peak_response`,
-#'       `prozone_logc_at_peak`, `response_floor`, `min_included_concentration`.}
+#'       `prozone_logc_at_peak`, `response_floor`, `min_included_concentration`,
+#'       `blank_centre`, `blank_value`, `response_offset`, `offset_delta`,
+#'       `n_nonpositive`.}
+#'     \item{`response_adjustment`}{The adjustment used (with `response_floor`
+#'       added); pass it to [transform_sample_response()] for samples and
+#'       controls.}
 #'   }
 #' @export
 preprocess_standards <- function(data, antigen_settings, response_variable,
@@ -447,6 +465,8 @@ preprocess_standards <- function(data, antigen_settings, response_variable,
                                  is_log_independent = TRUE,
                                  apply_prozone      = TRUE,
                                  include_col        = "included",
+                                 response_adjustment = NULL,
+                                 offset_delta       = 0.001,
                                  verbose            = FALSE) {
 
   undiluted_sc <- antigen_settings$standard_curve_concentration
@@ -492,18 +512,36 @@ preprocess_standards <- function(data, antigen_settings, response_variable,
     blank_geomean <- geom_mean(blank_data[[response_variable]][binc])
   }
 
+  # One response adjustment for the fit group (blank value + log offset). The
+  # caller passes the group-wide one (standards + controls + samples); without
+  # it, it is computed from these standards alone.
+  adj <- response_adjustment %||%
+    compute_response_adjustment(standards       = data,
+                                response_variable = response_variable,
+                                is_log_response = is_log_response,
+                                blank_data      = blank_data,
+                                blank_option    = blank_option,
+                                include_col     = include_col,
+                                delta           = offset_delta)
+  offset <- if (isTRUE(is_log_response)) adj$offset %||% 0 else 0
+
   data <- perform_blank_operation(blank_data = blank_data, data = data,
                                   response_variable    = response_variable,
                                   independent_variable = independent_variable,
                                   is_log_response      = is_log_response,
                                   blank_option         = blank_option,
                                   include_col          = include_col,
-                                  blank_mean           = blank_geomean,
+                                  blank_mean           = adj$blank_centre,
                                   verbose              = verbose)
 
-  # Adaptive log floor: 1% of the minimum INCLUDED positive response (post
-  # blank op), shared by the standards and the blanks so they land on the same
-  # response axis.
+  # Log offset: added to every standard (included and masked) before log10.
+  if (offset != 0)
+    data[[response_variable]] <- data[[response_variable]] + offset
+
+  # Display floor: 1% of the minimum INCLUDED positive (adjusted) response,
+  # shared by the standards and the blanks. With offset = 0 this is the
+  # pre-0.8.0 floor; with an offset it only touches rows outside the offset set
+  # (masked standards, blanks) that are still <= 0.
   response_floor <- NA_real_
   if (is_log_response) {
     inc  <- .included_mask(data, include_col)
@@ -523,6 +561,8 @@ preprocess_standards <- function(data, antigen_settings, response_variable,
   # blank-subtracted; they are only placed on the model-space response axis).
   blanks_out <- NULL
   if (!is.null(blank_data) && nrow(blank_data) > 0) {
+    if (offset != 0)
+      blank_data[[response_variable]] <- blank_data[[response_variable]] + offset
     blanks_out <- compute_log_response(blank_data, response_variable,
                                        is_log_response = is_log_response,
                                        include_col     = include_col,
@@ -549,12 +589,20 @@ preprocess_standards <- function(data, antigen_settings, response_variable,
     prozone_peak_response     = prozone_peak,
     prozone_logc_at_peak      = prozone_logc,
     response_floor            = response_floor,
-    min_included_concentration = min_included_conc
+    min_included_concentration = min_included_conc,
+    blank_centre              = adj$blank_centre,
+    blank_value               = adj$blank_value,
+    response_offset           = offset,
+    offset_delta              = adj$delta,
+    n_nonpositive             = adj$n_nonpositive
   )
+  adj$offset         <- offset
+  adj$response_floor <- response_floor
 
   list(data = data, blanks = blanks_out,
        antigen_fit_options = antigen_fit_options,
-       derived_stats = derived_stats)
+       derived_stats = derived_stats,
+       response_adjustment = adj)
 }
 
 
