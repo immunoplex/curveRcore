@@ -1,4 +1,4 @@
-# curveRcore 0.8.0 (development)
+# curveRcore 0.8.0
 
 ## Additive + proportional response noise model
 
